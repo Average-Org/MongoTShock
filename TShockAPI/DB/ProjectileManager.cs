@@ -17,6 +17,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using MongoDB.Entities;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace TShockAPI.DB
@@ -73,6 +75,8 @@ namespace TShockAPI.DB
 			ban.SaveAsync();
 			return true;
 		}
+		public IEnumerable<ProjectileBan> RetrieveAll() => MongoDB.Entities.DB.Find<ProjectileBan>().Match(w => true).ExecuteAsync().Result;
+
 
 		public ProjectileBan GetBanById(short id) => MongoDB.Entities.DB.Find<ProjectileBan>().ManyAsync(x => x.ID == id).Result.FirstOrDefault();
 

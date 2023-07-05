@@ -126,7 +126,7 @@ namespace TShockAPI
 				}
 
 				var output = new List<string>();
-				foreach (Region region in _regionManager.Regions.OrderBy(r => r.Z).Reverse())
+				foreach (Region region in _regionManager.RetrieveAll().OrderBy(r => r.Z).Reverse())
 				{
 					// Ensure that the specified tile is region protected
 					if (e.X < region.Area.Left || e.X > region.Area.Right)

@@ -117,6 +117,9 @@ namespace TShockAPI.DB
 			return true;
 		}
 
+		public IEnumerable<Region> RetrieveAll() => MongoDB.Entities.DB.Find<Region>().Match(w => w.WorldID==Main.worldID.ToString()).ExecuteAsync().Result;
+
+
 		/// <summary>
 		/// Sets the protected state of the region with a given name.
 		/// </summary>

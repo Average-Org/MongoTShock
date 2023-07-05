@@ -17,6 +17,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using MongoDB.Entities;
+using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace TShockAPI
@@ -68,6 +70,8 @@ namespace TShockAPI
 			}
 			return false;
 		}
+		public IEnumerable<TileBan> RetrieveAll() => MongoDB.Entities.DB.Find<TileBan>().Match(w=>true).ExecuteAsync().Result;
+
 
 		public bool RemoveGroup(short id, string group)
 		{

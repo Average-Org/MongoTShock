@@ -51,12 +51,18 @@ namespace TShockAPI.DB
 			return true;
 		}
 
+		public IEnumerable<Warp> RetrieveAll() => db.Find<Warp>().Match(w => w.WorldID == Main.worldID.ToString()).ExecuteAsync().Result;
+
 		/// <summary>
 		/// Removes a warp.
 		/// </summary>
 		/// <param name="warpName">The warp name.</param>
 		/// <returns>Whether the operation succeeded.</returns>
-		public void Remove(string warpName) => db.Find<Warp>().ManyAsync(x => x.Name == warpName).Result.ForEach(x => x.DeleteAsync());
+		public bool Remove(string warpName)
+		{
+			try { db.Find<Warp>().ManyAsync(x => x.Name == warpName).Result.ForEach(x => x.DeleteAsync()); return true; }
+			catch { return false; }
+		}
 
 		/// <summary>
 		/// Finds the warp with the given name.

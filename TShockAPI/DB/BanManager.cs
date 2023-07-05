@@ -118,7 +118,7 @@ namespace TShockAPI.DB
 		/// <param name="fromDate"></param>
 		/// <param name="toDate"></param>
 		/// <returns></returns>
-		public void InsertBan(string accountName, string reason, string banningUser, DateTime fromDate, DateTime toDate)
+		public Ban InsertBan(string accountName, string reason, string banningUser, DateTime fromDate, DateTime toDate)
 		{
 			Ban ban = new()
 			{
@@ -129,7 +129,65 @@ namespace TShockAPI.DB
 				Expires = toDate,
 			};
 			ban.SaveAsync();
+			return ban;
 		}
+
+		public Ban InsertBan(string identifier, string reason, string banningUser, DateTime fromDate, DateTime toDate, BanType banType = BanType.AccountName)
+		{
+			switch (banType)
+			{
+				case BanType.UUID:
+					{
+						Ban ban = new()
+						{
+							UUID = identifier,
+							Reason = reason,
+							BannedBy = banningUser,
+							TimeBanned = fromDate,
+							Expires = toDate,
+						};
+						ban.SaveAsync();
+						return ban;
+					}
+				case BanType.IP:
+					{
+						Ban ban = new()
+						{
+							IP = identifier,
+							Reason = reason,
+							BannedBy = banningUser,
+							TimeBanned = fromDate,
+							Expires = toDate,
+						};
+						ban.SaveAsync();
+						return ban;
+					}
+				default:
+				case BanType.AccountName:
+					{
+						Ban ban = new()
+						{
+							AccountName = identifier,
+							Reason = reason,
+							BannedBy = banningUser,
+							TimeBanned = fromDate,
+							Expires = toDate,
+						};
+						ban.SaveAsync();
+						return ban;
+					}
+			}
+
+		}
+
+		public enum BanType
+		{
+			IP,
+			UUID,
+			AccountName
+		}
+
+	
 
 		/// <summary>
 		/// Attempts to remove a ban. Returns true if the ban was removed or expired. False if the ban could not be removed or expired
@@ -137,8 +195,8 @@ namespace TShockAPI.DB
 		/// <param name="ticketNumber">The ticket number of the ban to change</param>
 		/// <param name="fullDelete">If true, deletes the ban from the database. If false, marks the expiration time as now, rendering the ban expired. Defaults to false</param>
 		/// <returns></returns>
-		public void RemoveBan(string id, bool fullDelete = false)
-		=> db.Find<Ban>().ManyAsync(x => x.ID == id).Result.First().DeleteAsync();
+		public bool RemoveBan(string id, bool fullDelete = false)
+		=> !db.Find<Ban>().ManyAsync(x => x.ID == id).Result.First().DeleteAsync().IsFaulted;
 
 
 		/// <summary>

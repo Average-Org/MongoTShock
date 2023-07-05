@@ -602,11 +602,6 @@ namespace TShockAPI
 		{
 			FileTools.SetupConfig();
 			TShock.HandleCommandLinePostConfigLoad(Environment.GetCommandLineArgs());
-			TShock.Groups.LoadPermisions();
-			TShock.Regions.Reload();
-			TShock.ItemBans.DataModel.UpdateItemBans();
-			TShock.ProjectileBans.UpdateBans();
-			TShock.TileBans.UpdateBans();
 		}
 
 		/// <summary>
@@ -1059,7 +1054,7 @@ namespace TShockAPI
 			output.Append("|Permission|");
 
 			// Traverse to build group name list
-			foreach (Group g in TShock.Groups.groups)
+			foreach (Group g in TShock.Groups.RetrieveAll())
 			{
 				output.Append("[[");
 				output.Append(g.Name);
@@ -1070,7 +1065,7 @@ namespace TShockAPI
 			output.AppendLine();
 			output.Append("|-------|");
 
-			foreach (Group g in TShock.Groups.groups)
+			foreach (Group g in TShock.Groups.RetrieveAll())
 			{
 				output.Append("-------|");
 			}
@@ -1082,7 +1077,7 @@ namespace TShockAPI
 				output.Append((string)field.GetValue(null));
 				output.Append("]]|");
 
-				foreach (Group g in TShock.Groups.groups)
+				foreach (Group g in TShock.Groups.RetrieveAll())
 				{
 					if (g.HasPermission((string)field.GetValue(null)))
 					{

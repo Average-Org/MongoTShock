@@ -37,6 +37,8 @@ using TShockAPI.Localization;
 using System.Text.RegularExpressions;
 using Terraria.DataStructures;
 using Terraria.GameContent.Creative;
+using static TShockAPI.DB.BanManager;
+using Steamworks;
 
 namespace TShockAPI
 {
@@ -1280,18 +1282,17 @@ namespace TShockAPI
 					DateTime LastSeen;
 					string Timezone = TimeZone.CurrentTimeZone.GetUtcOffset(DateTime.Now).Hours.ToString("+#;-#");
 
-					if (DateTime.TryParse(account.LastAccessed, out LastSeen))
-					{
-						LastSeen = DateTime.Parse(account.LastAccessed).ToLocalTime();
+	
+						LastSeen = account.LastAccessed.ToLocalTime();
 						args.Player.SendSuccessMessage(GetString("{0}'s last login occurred {1} {2} UTC{3}.", account.Name, LastSeen.ToShortDateString(),
 							LastSeen.ToShortTimeString(), Timezone));
-					}
+					
 
 					if (args.Player.Group.HasPermission(Permissions.advaccountinfo))
 					{
 						List<string> KnownIps = JsonConvert.DeserializeObject<List<string>>(account.KnownIps?.ToString() ?? string.Empty);
 						string ip = KnownIps?[KnownIps.Count - 1] ?? GetString("N/A");
-						DateTime Registered = DateTime.Parse(account.Registered).ToLocalTime();
+						DateTime Registered = account.Registered.ToLocalTime();
 
 						args.Player.SendSuccessMessage(GetString("{0}'s group is {1}.", account.Name, account.Group));
 						args.Player.SendSuccessMessage(GetString("{0}'s last known IP is {1}.", account.Name, ip));
@@ -1414,7 +1415,7 @@ namespace TShockAPI
 						args.Player.SendMessage(GetString($"- {"Ticket Numbers".Color(Utils.RedHighlight)} are provided when you add a ban, and can be found with the {"ban list".Color(Utils.BoldHighlight)} command."), Color.White);
 						args.Player.SendMessage(GetString($"Example usage: {"ban details".Color(Utils.BoldHighlight)} {"12345".Color(Utils.RedHighlight)}"), Color.White);
 						break;
-
+/*
 					case "identifiers":
 						if (!PaginationTools.TryParsePageNumber(args.Parameters, 2, args.Player, out int pageNumber))
 						{
@@ -1436,7 +1437,7 @@ namespace TShockAPI
 								LineTextColor = Color.White
 							});
 						break;
-
+*/
 					case "examples":
 						args.Player.SendMessage(GetString(""), Color.White);
 						args.Player.SendMessage(GetString("Ban Usage Examples"), Color.White);
@@ -1487,17 +1488,19 @@ namespace TShockAPI
 				}
 			}
 
-			void DoBan(string accName, string reason, DateTime expiration)
+			Ban DoBan(string identifier, string reason, DateTime expiration, BanType type = BanType.AccountName)
 			{
 				try
 				{
-					TShock.Bans.InsertBan(accName, reason, args.Player.Account.Name, DateTime.UtcNow, expiration);
+					var ban = TShock.Bans.InsertBan(identifier, reason, args.Player.Account.Name, DateTime.UtcNow, expiration, type);
 					args.Player.SendSuccessMessage(GetString($"Ban added."));
+					return ban;
 				}
 				catch
 				{
 
-						args.Player.SendWarningMessage(GetString($"Failed to add ban: {accName.Color(Utils.WhiteHighlight)}."));
+					args.Player.SendWarningMessage(GetString($"Failed to add ban: {identifier.Color(Utils.WhiteHighlight)}."));
+					return null;
 				}
 
 			}
@@ -1587,34 +1590,29 @@ namespace TShockAPI
 				}
 
 				var player = players[0];
-				AddBanResult banResult = null;
+				Ban banResult = null;
 
-				if (banAccount)
+				if (banAccount || banName)
 				{
 					if (player.Account != null)
 					{
-						banResult = DoBan($"{Identifier.Account}{player.Account.Name}", reason, expiration);
+						banResult = DoBan($"{player.Account.Name}", reason, expiration);
 					}
 				}
 
 				if (banUuid)
 				{
-					banResult = DoBan($"{Identifier.UUID}{player.UUID}", reason, expiration);
-				}
-
-				if (banName)
-				{
-					banResult = DoBan($"{Identifier.Name}{player.Name}", reason, expiration);
+					banResult = DoBan($"{player.UUID}", reason, expiration, BanType.UUID);
 				}
 
 				if (banIp)
 				{
-					banResult = DoBan($"{Identifier.IP}{player.IP}", reason, expiration);
+					banResult = DoBan($"{player.IP}", reason, expiration, BanType.IP);
 				}
 
-				if (banResult?.Ban != null)
+				if (banResult is not null)
 				{
-					player.Disconnect(GetString($"#{banResult.Ban.TicketNumber} - You have been banned: {banResult.Ban.Reason}."));
+					player.Disconnect(GetString($"#{banResult.ID} - You have been banned: {banResult.Reason}."));
 				}
 			}
 
@@ -1632,7 +1630,7 @@ namespace TShockAPI
 					return;
 				}
 
-				if (TShock.Bans.RemoveBan(banId))
+				if (TShock.Bans.RemoveBan(banId.ToString()))
 				{
 					TShock.Log.ConsoleInfo(GetString($"Ban {banId} has been revoked by {args.Player.Account.Name}."));
 					args.Player.SendSuccessMessage(GetString($"Ban {banId.Color(Utils.GreenHighlight)} has now been marked as expired."));
@@ -1691,7 +1689,7 @@ namespace TShockAPI
 					return;
 				}
 
-				Ban ban = TShock.Bans.GetBanById(banId);
+				Ban ban = TShock.Bans.GetBanById(banId.ToString());
 
 				if (ban == null)
 				{
@@ -3223,7 +3221,7 @@ namespace TShockAPI
 				int pageNumber;
 				if (!PaginationTools.TryParsePageNumber(args.Parameters, 1, args.Player, out pageNumber))
 					return;
-				IEnumerable<string> warpNames = from warp in TShock.Warps.Warps
+				IEnumerable<string> warpNames = from warp in TShock.Warps.RetrieveAll()
 												where !warp.IsPrivate
 												select warp.Name;
 				PaginationTools.SendPage(args.Player, pageNumber, PaginationTools.BuildLinesFromTerms(warpNames),
@@ -3376,11 +3374,10 @@ namespace TShockAPI
 
 						string groupName = args.Parameters[1];
 						args.Parameters.RemoveRange(0, 2);
-						string permissions = String.Join(",", args.Parameters);
 
 						try
 						{
-							TShock.Groups.AddGroup(groupName, null, permissions, TShockAPI.Group.defaultChatColor);
+							TShock.Groups.AddGroup(groupName, null, args.Parameters.ToArray(), TShockAPI.Group.defaultChatColor);
 							args.Player.SendSuccessMessage(GetString($"Group {groupName} was added successfully."));
 						}
 						catch (GroupExistsException)
@@ -3490,7 +3487,7 @@ namespace TShockAPI
 
 							try
 							{
-								TShock.Groups.UpdateGroup(groupName, newParentGroupName, group.Permissions, group.ChatColor, group.Suffix, group.Prefix);
+								TShock.Groups.UpdateGroup(groupName, newParentGroupName, group.Permissions.ToArray(), group.ChatColor, group.Suffix, group.Prefix);
 
 								if (!string.IsNullOrWhiteSpace(newParentGroupName))
 									args.Player.SendSuccessMessage(GetString("Parent of group \"{0}\" set to \"{1}\".", groupName, newParentGroupName));
@@ -3535,7 +3532,7 @@ namespace TShockAPI
 
 							try
 							{
-								TShock.Groups.UpdateGroup(groupName, group.ParentName, group.Permissions, group.ChatColor, newSuffix, group.Prefix);
+								TShock.Groups.UpdateGroup(groupName, group.ParentName, group.Permissions.ToArray(), group.ChatColor, newSuffix, group.Prefix);
 
 								if (!string.IsNullOrWhiteSpace(newSuffix))
 									args.Player.SendSuccessMessage(GetString("Suffix of group \"{0}\" set to \"{1}\".", groupName, newSuffix));
@@ -3580,7 +3577,7 @@ namespace TShockAPI
 
 							try
 							{
-								TShock.Groups.UpdateGroup(groupName, group.ParentName, group.Permissions, group.ChatColor, group.Suffix, newPrefix);
+								TShock.Groups.UpdateGroup(groupName, group.ParentName, group.Permissions.ToArray(), group.ChatColor, group.Suffix, newPrefix);
 
 								if (!string.IsNullOrWhiteSpace(newPrefix))
 									args.Player.SendSuccessMessage(GetString("Prefix of group \"{0}\" set to \"{1}\".", groupName, newPrefix));
@@ -3631,7 +3628,7 @@ namespace TShockAPI
 							{
 								try
 								{
-									TShock.Groups.UpdateGroup(groupName, group.ParentName, group.Permissions, newColor, group.Suffix, group.Prefix);
+									TShock.Groups.UpdateGroup(groupName, group.ParentName, group.Permissions.ToArray(), newColor, group.Suffix, group.Prefix);
 
 									args.Player.SendSuccessMessage(GetString("Chat color for group \"{0}\" set to \"{1}\".", groupName, newColor));
 								}
@@ -3741,7 +3738,7 @@ namespace TShockAPI
 						int pageNumber;
 						if (!PaginationTools.TryParsePageNumber(args.Parameters, 1, args.Player, out pageNumber))
 							return;
-						var groupNames = from grp in TShock.Groups.groups
+						var groupNames = from grp in TShock.Groups.RetrieveAll()
 										 select grp.Name;
 						PaginationTools.SendPage(args.Player, pageNumber, PaginationTools.BuildLinesFromTerms(groupNames),
 							new PaginationTools.Settings
@@ -3995,7 +3992,7 @@ namespace TShockAPI
 						int pageNumber;
 						if (!PaginationTools.TryParsePageNumber(args.Parameters, 1, args.Player, out pageNumber))
 							return;
-						IEnumerable<string> itemNames = from itemBan in TShock.ItemBans.DataModel.ItemBans
+						IEnumerable<string> itemNames = from itemBan in TShock.ItemBans.DataModel.RetrieveAll()
 														select itemBan.Name;
 						PaginationTools.SendPage(args.Player, pageNumber, PaginationTools.BuildLinesFromTerms(itemNames),
 							new PaginationTools.Settings
@@ -4173,7 +4170,7 @@ namespace TShockAPI
 						int pageNumber;
 						if (!PaginationTools.TryParsePageNumber(args.Parameters, 1, args.Player, out pageNumber))
 							return;
-						IEnumerable<Int16> projectileIds = from projectileBan in TShock.ProjectileBans.ProjectileBans
+						IEnumerable<Int16> projectileIds = from projectileBan in TShock.ProjectileBans.RetrieveAll()
 														   select projectileBan.ID;
 						PaginationTools.SendPage(args.Player, pageNumber, PaginationTools.BuildLinesFromTerms(projectileIds),
 							new PaginationTools.Settings
@@ -4349,7 +4346,7 @@ namespace TShockAPI
 						int pageNumber;
 						if (!PaginationTools.TryParsePageNumber(args.Parameters, 1, args.Player, out pageNumber))
 							return;
-						IEnumerable<Int16> tileIds = from tileBan in TShock.TileBans.TileBans
+						IEnumerable<Int16> tileIds = from tileBan in TShock.TileBans.RetrieveAll()
 													 select tileBan.ID;
 						PaginationTools.SendPage(args.Player, pageNumber, PaginationTools.BuildLinesFromTerms(tileIds),
 							new PaginationTools.Settings
@@ -4910,7 +4907,7 @@ namespace TShockAPI
 						if (!PaginationTools.TryParsePageNumber(args.Parameters, 1, args.Player, out pageNumber))
 							return;
 
-						IEnumerable<string> regionNames = from region in TShock.Regions.Regions
+						IEnumerable<string> regionNames = from region in TShock.Regions.RetrieveAll()
 														  where region.WorldID == Main.worldID.ToString()
 														  select region.Name;
 						PaginationTools.SendPage(args.Player, pageNumber, PaginationTools.BuildLinesFromTerms(regionNames),

@@ -56,6 +56,8 @@ namespace TShockAPI.DB
 			return b != null &&!b.HasPermissionToUseItem(ply);
 		}
 
+		public IEnumerable<ItemBan> RetrieveAll() => MongoDB.Entities.DB.Find<ItemBan>().Match(w => true).ExecuteAsync().Result;
+
 		public bool AllowGroup(string item, string name)
 		{
 			ItemBan ban = GetItemBanByName(item);

@@ -122,6 +122,8 @@ namespace TShockAPI.DB
 		/// <returns>The group.</returns>
 		public Group GetGroupByName(string name) => MongoDB.Entities.DB.Find<Group>().ManyAsync(a => a.Name == name).Result.First();
 
+		public IEnumerable<Group> RetrieveAll() => MongoDB.Entities.DB.Find<Group>().ManyAsync(a => true).Result;
+
 		/// <summary>
 		/// Adds group with name and permissions if it does not exist.
 		/// </summary>

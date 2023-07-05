@@ -16,6 +16,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using HttpServer;
+using Rests;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -24,11 +26,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using HttpServer;
-using Rests;
 using Terraria;
-using TShockAPI.DB;
-using Newtonsoft.Json;
 
 namespace TShockAPI
 {
@@ -404,7 +402,7 @@ namespace TShockAPI
 				{"port", TShock.Config.Settings.ServerPort},
 				{"playercount", Main.player.Where(p => null != p && p.active).Count()},
 				{"maxplayers", TShock.Config.Settings.MaxSlots},
-				{"world", (TShock.Config.Settings.UseServerName ? TShock.Config.Settings.ServerName : Main.worldName)},
+				{"world", TShock.Config.Settings.UseServerName ? TShock.Config.Settings.ServerName : Main.worldName},
 				{"uptime", (DateTime.Now - System.Diagnostics.Process.GetCurrentProcess().StartTime).ToString(@"d'.'hh':'mm':'ss")},
 				{"serverpassword", !string.IsNullOrEmpty(TShock.Config.Settings.ServerPassword)}
 			};
@@ -414,7 +412,7 @@ namespace TShockAPI
 				var players = new ArrayList();
 				foreach (TSPlayer tsPlayer in TShock.Players.Where(p => null != p))
 				{
-					var p = PlayerFilter(tsPlayer, args.Parameters, (!string.IsNullOrEmpty(args.TokenData.UserGroupName) && TShock.Groups.GetGroupByName(args.TokenData.UserGroupName).HasPermission(RestPermissions.viewips)));
+					var p = PlayerFilter(tsPlayer, args.Parameters, !string.IsNullOrEmpty(args.TokenData.UserGroupName) && TShock.Groups.GetGroupByName(args.TokenData.UserGroupName).HasPermission(RestPermissions.viewips));
 					if (null != p)
 						players.Add(p);
 				}
@@ -463,10 +461,7 @@ namespace TShockAPI
 		[Route("/v2/users/activelist")]
 		[Permission(RestPermissions.restviewusers)]
 		[Token]
-		private object UserActiveListV2(RestRequestArgs args)
-		{
-			return new RestObject() { { "activeusers", string.Join("\t", TShock.Players.Where(p => null != p && null != p.Account && p.Active).Select(p => p.Account.Name)) } };
-		}
+		private object UserActiveListV2(RestRequestArgs args) => new RestObject() { { "activeusers", string.Join("\t", TShock.Players.Where(p => null != p && null != p.Account && p.Active).Select(p => p.Account.Name)) } };
 
 		[Description("Lists all user accounts in the TShock database.")]
 		[Route("/v2/users/list")]
@@ -503,7 +498,8 @@ namespace TShockAPI
 				return RestMissingParam("password");
 
 			// NOTE: ip can be blank
-			UserAccount account = new UserAccount(username, "", "", group, "", "", "");
+			var currTime = DateTime.UtcNow;
+			UserAccount account = new(username, "", "", group, currTime, currTime, "");
 			try
 			{
 				account.CreateBCryptHash(password);
@@ -634,41 +630,41 @@ namespace TShockAPI
 
 			if (!DateTime.TryParse(args.Parameters["end"], out DateTime endDate))
 				endDate = DateTime.MaxValue;
-
-			AddBanResult banResult = TShock.Bans.InsertBan(identifier, reason, args.TokenData.Username, startDate, endDate);
-			if (banResult.Ban != null)
+			try
 			{
+				var ban = TShock.Bans.InsertBan(identifier, reason, args.TokenData.Username, startDate, endDate);
+
+
+
+
 				TSPlayer player = null;
-				if (identifier.StartsWith(Identifier.IP.Prefix))
+
+				if (!String.IsNullOrEmpty(ban.IP))
 				{
-					player = TShock.Players.FirstOrDefault(p => p.IP == identifier.Substring(Identifier.IP.Prefix.Length));
+					player = TShock.Players.FirstOrDefault(p => p.IP == ban.IP);
 				}
-				else if (identifier.StartsWith(Identifier.Name.Prefix))
+				else if (!String.IsNullOrEmpty(ban.AccountName))
 				{
 					//Character names may not necessarily be unique, so kick all matches
-					foreach (var ply in TShock.Players.Where(p => p.Name == identifier.Substring(Identifier.Name.Prefix.Length)))
+					foreach (var ply in TShock.Players.Where(p => p.Account.Name == ban.AccountName))
 					{
 						ply.Kick(reason, true);
 					}
 				}
-				else if (identifier.StartsWith(Identifier.Account.Prefix))
+				else if (!String.IsNullOrEmpty(ban.UUID))
 				{
-					player = TShock.Players.FirstOrDefault(p => p.Account?.Name == identifier.Substring(Identifier.Account.Prefix.Length));
-				}
-				else if (identifier.StartsWith(Identifier.UUID.Prefix))
-				{
-					player = TShock.Players.FirstOrDefault(p => p.UUID == identifier.Substring(Identifier.UUID.Prefix.Length));
+					player = TShock.Players.FirstOrDefault(p => p.UUID == ban.UUID);
 				}
 
-				if (player != null)
-				{
-					player.Kick(reason, true);
-				}
+				player?.Kick(reason, true);
 
-				return RestResponse(GetString($"Ban added. Ticket number: {banResult.Ban.TicketNumber}"));
+				return RestResponse(GetString($"Ban added. Ticket number: {ban.ID}"));
 			}
+			catch
+			{
 
-			return RestError(GetString($"Failed to add ban. {banResult.Message}"), status: "500");
+				return RestError(GetString($"Failed to add ban."), status: "500");
+			}
 		}
 
 		[Description("Delete an existing ban entry.")]
@@ -690,7 +686,7 @@ namespace TShockAPI
 
 			bool.TryParse(args.Parameters["fullDelete"], out bool fullDelete);
 
-			if (TShock.Bans.RemoveBan(ticketNumber, fullDelete))
+			if (TShock.Bans.RemoveBan(ticketNumber.ToString(), fullDelete))
 			{
 				return RestResponse(GetString("Ban removed."));
 			}
@@ -714,7 +710,7 @@ namespace TShockAPI
 				return RestInvalidParam("ticketNumber");
 			}
 
-			Ban ban = TShock.Bans.GetBanById(ticketNumber);
+			Ban ban = TShock.Bans.GetBanById(ticketNumber.ToString());
 
 			if (ban == null)
 			{
@@ -723,12 +719,14 @@ namespace TShockAPI
 
 			return new RestObject
 			{
-				{ "ticket_number", ban.TicketNumber },
-				{ "identifier", ban.Identifier },
-				{ "reason", ban.Reason },
-				{ "banning_user", ban.BanningUser },
-				{ "start_date_ticks", ban.TimeBanned.Ticks },
-				{ "end_date_ticks", ban.Expires.Ticks },
+				{ "ban_id", ban.ID.ToString() },
+				{ "ban_reason", ban.Reason },
+				{ "ban_source", ban.BannedBy },
+				{ "ban_start", ban.TimeBanned.ToString("yyyy-MM-dd HH:mm:ss") },
+				{ "ban_end", ban.Expires },
+				{ "ban_ip", ban.IP },
+				{ "ban_account", ban.AccountName },
+				{ "ban_uuid", ban.UUID },
 			};
 		}
 
@@ -746,12 +744,14 @@ namespace TShockAPI
 				banList.Add(
 					new Dictionary<string, object>
 					{
-						{ "ticket_number", ban.TicketNumber },
-						{ "identifier", ban.Identifier },
-						{ "reason", ban.Reason },
-						{ "banning_user", ban.BanningUser },
-						{ "start_date_ticks", ban.TimeBanned.Ticks },
-						{ "end_date_ticks", ban.Expires.Ticks },
+						{ "ban_id", ban.ID.ToString() },
+						{ "ban_reason", ban.Reason },
+						{ "ban_source", ban.BannedBy },
+						{ "ban_start", ban.TimeBanned.ToString("yyyy-MM-dd HH:mm:ss") },
+						{ "ban_end", ban.Expires },
+						{ "ban_ip", ban.IP },
+						{ "ban_account", ban.AccountName },
+						{ "ban_uuid", ban.UUID },
 					}
 				);
 			}
@@ -854,7 +854,7 @@ namespace TShockAPI
 		{
 			return new RestObject()
 			{
-				{"name", (TShock.Config.Settings.UseServerName ? TShock.Config.Settings.ServerName : Main.worldName)},
+				{"name", TShock.Config.Settings.UseServerName ? TShock.Config.Settings.ServerName : Main.worldName},
 				{"size", Main.maxTilesX + "*" + Main.maxTilesY},
 				{"time", Main.time},
 				{"daytime", Main.dayTime},
@@ -924,20 +924,14 @@ namespace TShockAPI
 		[Permission(RestPermissions.restmute)]
 		[Noun("player", true, "The player to mute.", typeof(String))]
 		[Token]
-		private object PlayerUnMute(RestRequestArgs args)
-		{
-			return PlayerSetMute(args.Parameters, false);
-		}
+		private object PlayerUnMute(RestRequestArgs args) => PlayerSetMute(args.Parameters, false);
 
 		[Description("Mute a player.")]
 		[Route("/v2/players/mute")]
 		[Permission(RestPermissions.restmute)]
 		[Noun("player", true, "The player to mute.", typeof(String))]
 		[Token]
-		private object PlayerMute(RestRequestArgs args)
-		{
-			return PlayerSetMute(args.Parameters, true);
-		}
+		private object PlayerMute(RestRequestArgs args) => PlayerSetMute(args.Parameters, true);
 
 		[Description("List all player names that are currently on the server.")]
 		[Route("/lists/players")]
@@ -987,9 +981,9 @@ namespace TShockAPI
 				{"registered", player.Account?.Registered},
 				{"muted", player.mute },
 				{"position", player.TileX + "," + player.TileY},
-				{"inventory", string.Join(", ", inventory.Select(p => (p.Name + ":" + p.stack)))},
-				{"armor", string.Join(", ", equipment.Select(p => (p.netID + ":" + p.prefix)))},
-				{"dyes", string.Join(", ", dyes.Select(p => (p.Name)))},
+				{"inventory", string.Join(", ", inventory.Select(p => p.Name + ":" + p.stack))},
+				{"armor", string.Join(", ", equipment.Select(p => p.netID + ":" + p.prefix))},
+				{"dyes", string.Join(", ", dyes.Select(p => p.Name))},
 				{"buffs", string.Join(", ", player.TPlayer.buffType)}
 			};
 		}
@@ -1103,8 +1097,8 @@ namespace TShockAPI
 				{"name", group.Name},
 				{"parent", group.ParentName},
 				{"chatcolor", string.Format("{0},{1},{2}", group.R, group.G, group.B)},
-				{"permissions", group.permissions},
-				{"negatedpermissions", group.negatedpermissions},
+				{"permissions", group.Permissions},
+				{"negatedpermissions", group.NegatedPermissions},
 				{"totalpermissions", group.TotalPermissions}
 			};
 		}
@@ -1148,7 +1142,7 @@ namespace TShockAPI
 				return RestMissingParam("group");
 			try
 			{
-				TShock.Groups.AddGroup(name, args.Parameters["parent"], args.Parameters["permissions"], args.Parameters["chatcolor"]);
+				TShock.Groups.AddGroup(name, args.Parameters["parent"], new string[] { args.Parameters["permissions"] }, args.Parameters["chatcolor"]);
 			}
 			catch (Exception e)
 			{
@@ -1177,7 +1171,7 @@ namespace TShockAPI
 			var permissions = (null == args.Parameters["permissions"]) ? group.Permissions.ToString() : args.Parameters["permissions"];
 			try
 			{
-				TShock.Groups.UpdateGroup(group.Name, parent, permissions, chatcolor, group.Suffix, group.Prefix);
+				TShock.Groups.UpdateGroup(group.Name, parent, new string[] { permissions }, chatcolor, group.Suffix, group.Prefix);
 			}
 			catch (Exception e)
 			{
@@ -1259,30 +1253,15 @@ namespace TShockAPI
 			File.WriteAllText("docs/rest-fields.md", sb.ToString());
 		}
 
-		private RestObject RestError(string message, string status = "400")
-		{
-			return new RestObject(status) { Error = message };
-		}
+		private RestObject RestError(string message, string status = "400") => new RestObject(status) { Error = message };
 
-		private RestObject RestResponse(string message, string status = "200")
-		{
-			return new RestObject(status) { Response = message };
-		}
+		private RestObject RestResponse(string message, string status = "200") => new RestObject(status) { Response = message };
 
-		private RestObject RestMissingParam(string var)
-		{
-			return RestError(GetString($"Missing or empty {var} parameter"));
-		}
+		private RestObject RestMissingParam(string var) => RestError(GetString($"Missing or empty {var} parameter"));
 
-		private RestObject RestMissingParam(params string[] vars)
-		{
-			return RestMissingParam(string.Join(", ", vars));
-		}
+		private RestObject RestMissingParam(params string[] vars) => RestMissingParam(string.Join(", ", vars));
 
-		private RestObject RestInvalidParam(string var)
-		{
-			return RestError(GetString($"Missing or invalid {var} parameter"));
-		}
+		private RestObject RestInvalidParam(string var) => RestError(GetString($"Missing or invalid {var} parameter"));
 
 		private bool GetBool(string val, bool def)
 		{

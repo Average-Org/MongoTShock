@@ -1923,19 +1923,19 @@ namespace TShockAPI
 			if (!ConnectionAlive)
 				return true;
 
-			TShock.Bans.InsertBan($"{Identifier.IP}{IP}", reason, adminUserName, DateTime.UtcNow, DateTime.MaxValue);
-			TShock.Bans.InsertBan($"{Identifier.UUID}{UUID}", reason, adminUserName, DateTime.UtcNow, DateTime.MaxValue);
+			TShock.Bans.InsertBan($"{IP}", reason, adminUserName, DateTime.UtcNow, DateTime.MaxValue, BanManager.BanType.IP);
+			TShock.Bans.InsertBan($"{UUID}", reason, adminUserName, DateTime.UtcNow, DateTime.MaxValue, BanManager.BanType.UUID);
 			if (Account != null)
 			{
-				TShock.Bans.InsertBan($"{Identifier.Account}{Account.Name}", reason, adminUserName, DateTime.UtcNow, DateTime.MaxValue);
+				TShock.Bans.InsertBan($"{Account.Name}", reason, adminUserName, DateTime.UtcNow, DateTime.MaxValue, BanManager.BanType.AccountName);
 			}
 
 			Disconnect(GetString("Banned: {0}", reason));
 
 			if (string.IsNullOrWhiteSpace(adminUserName))
-				TSPlayer.All.SendInfoMessage(GetString("{0} was banned for '{1}'.", Name, reason));
+				All.SendInfoMessage(GetString("{0} was banned for '{1}'.", Name, reason));
 			else
-				TSPlayer.All.SendInfoMessage(GetString("{0} banned {1} for '{2}'.", adminUserName, Name, reason));
+				All.SendInfoMessage(GetString("{0} banned {1} for '{2}'.", adminUserName, Name, reason));
 			return true;
 		}
 
@@ -2096,7 +2096,7 @@ namespace TShockAPI
 		/// </summary>
 		/// <param name="bannedProj">The <see cref="ProjectileBan" /> to check.</param>
 		/// <returns>True if the player has permission to use the banned projectile.</returns>
-		public bool HasPermission(ProjectileBan bannedProj) => TShock.ProjectileBans.ProjectileIsBanned(bannedProj.ID, this);
+		public bool HasPermission(ProjectileBan bannedProj) => TShock.ProjectileBans.IsBanned(bannedProj.ID, this);
 		/// <summary>
 		/// Checks to see if a player has permission to use the specific banned tile.
 		/// Fires the <see cref="PlayerHooks.OnPlayerTilebanPermission"/> hook which may be handled to override tile ban permission checks.
