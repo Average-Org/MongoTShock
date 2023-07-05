@@ -22,7 +22,7 @@ namespace TShockAPI
 
 		/// <summary>
 		/// Returns a string in the format dd:mm:hh:ss indicating the time until the ban expires.
-		/// If the ban is not set to expire (ExpirationDateTime == DateTime.MaxValue), returns the string 'Never'
+		/// If the ban is not set to expire (Expires == DateTime.MaxValue), returns the string 'Never'
 		/// </summary>
 		/// <returns></returns>
 		public string GetPrettyExpirationString()

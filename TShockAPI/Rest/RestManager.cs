@@ -727,8 +727,8 @@ namespace TShockAPI
 				{ "identifier", ban.Identifier },
 				{ "reason", ban.Reason },
 				{ "banning_user", ban.BanningUser },
-				{ "start_date_ticks", ban.BanDateTime.Ticks },
-				{ "end_date_ticks", ban.ExpirationDateTime.Ticks },
+				{ "start_date_ticks", ban.TimeBanned.Ticks },
+				{ "end_date_ticks", ban.Expires.Ticks },
 			};
 		}
 
@@ -738,7 +738,7 @@ namespace TShockAPI
 		[Token]
 		private object BanListV3(RestRequestArgs args)
 		{
-			IEnumerable<Ban> bans = TShock.Bans.Bans.Select(kvp => kvp.Value);
+			IEnumerable<Ban> bans = TShock.Bans.RetrieveAllBans();
 
 			var banList = new ArrayList();
 			foreach (var ban in bans)
@@ -750,8 +750,8 @@ namespace TShockAPI
 						{ "identifier", ban.Identifier },
 						{ "reason", ban.Reason },
 						{ "banning_user", ban.BanningUser },
-						{ "start_date_ticks", ban.BanDateTime.Ticks },
-						{ "end_date_ticks", ban.ExpirationDateTime.Ticks },
+						{ "start_date_ticks", ban.TimeBanned.Ticks },
+						{ "end_date_ticks", ban.Expires.Ticks },
 					}
 				);
 			}

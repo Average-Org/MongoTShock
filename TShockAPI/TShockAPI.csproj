@@ -33,7 +33,7 @@
 
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
-    <PackageReference Include="GetText.NET" Version="1.7.14" />
+    <PackageReference Include="GetText.NET" Version="1.8.7" />
     <PackageReference Include="MongoDB.Entities" Version="22.0.0" />
   </ItemGroup>
 

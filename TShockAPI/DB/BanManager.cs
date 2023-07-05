@@ -284,12 +284,12 @@ namespace TShockAPI.DB
 			/// <summary>
 			/// DateTime from which the ban will take effect
 			/// </summary>
-			public DateTime BanDateTime { get; set; }
+			public DateTime TimeBanned { get; set; }
 
 			/// <summary>
 			/// DateTime at which the ban will end
 			/// </summary>
-			public DateTime ExpirationDateTime { get; set; }
+			public DateTime Expires { get; set; }
 
 			/// <summary>
 			/// Whether or not the operation should be considered to be valid

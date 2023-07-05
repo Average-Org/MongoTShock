@@ -1647,8 +1647,8 @@ namespace TShockAPI
 			{
 				string PickColorForBan(Ban ban)
 				{
-					double hoursRemaining = (ban.ExpirationDateTime - DateTime.UtcNow).TotalHours;
-					double hoursTotal = (ban.ExpirationDateTime - ban.BanDateTime).TotalHours;
+					double hoursRemaining = ((TimeSpan)(ban.Expires - DateTime.UtcNow)).TotalHours;
+					double hoursTotal = ((TimeSpan)(ban.Expires - ban.TimeBanned)).TotalHours;
 					double percentRemaining = TShock.Utils.Clamp(hoursRemaining / hoursTotal, 100, 0);
 
 					int red = TShock.Utils.Clamp((int)(255 * 2.0f * percentRemaining), 255, 0);
@@ -1663,10 +1663,10 @@ namespace TShockAPI
 					return;
 				}
 
-				var bans = from ban in TShock.Bans.Bans
-						   where ban.Value.ExpirationDateTime > DateTime.UtcNow
-						   orderby ban.Value.ExpirationDateTime ascending
-						   select $"[{ban.Key.Color(Utils.GreenHighlight)}] {ban.Value.Identifier.Color(PickColorForBan(ban.Value))}";
+				var bans = from ban in TShock.Bans.RetrieveAllBans()
+						   where ban.Expires > DateTime.UtcNow
+						   orderby ban.Expires ascending
+						   select $"[{ban.Color(Utils.GreenHighlight)}]";
 
 				PaginationTools.SendPage(args.Player, pageNumber, bans.ToList(),
 					new PaginationTools.Settings
