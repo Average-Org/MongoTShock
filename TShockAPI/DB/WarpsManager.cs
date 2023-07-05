@@ -21,40 +21,16 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using MySql.Data.MySqlClient;
 using Terraria;
 using Microsoft.Xna.Framework;
+using MongoDB.Entities;
+using db = MongoDB.Entities.DB;
+
 
 namespace TShockAPI.DB
 {
 	public class WarpManager
 	{
-		private IDbConnection database;
-		/// <summary>
-		/// The list of warps.
-		/// </summary>
-		public List<Warp> Warps = new List<Warp>();
-
-		[SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
-		internal WarpManager(IDbConnection db)
-		{
-			database = db;
-
-			var table = new SqlTable("Warps",
-			                         new SqlColumn("Id", MySqlDbType.Int32){Primary = true, AutoIncrement = true},
-									 new SqlColumn("WarpName", MySqlDbType.VarChar, 50) {Unique = true},
-			                         new SqlColumn("X", MySqlDbType.Int32),
-			                         new SqlColumn("Y", MySqlDbType.Int32),
-									 new SqlColumn("WorldID", MySqlDbType.VarChar, 50) { Unique = true },
-			                         new SqlColumn("Private", MySqlDbType.Text)
-				);
-			var creator = new SqlTableCreator(db,
-			                                  db.GetSqlType() == SqlType.Sqlite
-			                                  	? (IQueryBuilder) new SqliteQueryCreator()
-			                                  	: new MysqlQueryCreator());
-			creator.EnsureTableStructure(table);
-		}
-
 		/// <summary>
 		/// Adds a warp.
 		/// </summary>
@@ -64,40 +40,15 @@ namespace TShockAPI.DB
 		/// <returns>Whether the operation succeeded.</returns>
 		public bool Add(int x, int y, string name)
 		{
-			try
+			Warp warp = new()
 			{
-				if (database.Query("INSERT INTO Warps (X, Y, WarpName, WorldID) VALUES (@0, @1, @2, @3);",
-					x, y, name, Main.worldID.ToString()) > 0)
-				{
-					Warps.Add(new Warp(new Point(x, y), name));
-					return true;
-				}
-			}
-			catch (Exception ex)
-			{
-				TShock.Log.Error(ex.ToString());
-			}
-			return false;
-		}
+				Position = new(x, y),
+				Name = name,
+				WorldID = Main.worldID.ToString()
+			};
 
-		/// <summary>
-		/// Reloads all warps.
-		/// </summary>
-		public void ReloadWarps()
-		{
-			Warps.Clear();
-
-			using (var reader = database.QueryReader("SELECT * FROM Warps WHERE WorldID = @0",
-				Main.worldID.ToString()))
-			{
-				while (reader.Read())
-				{
-					Warps.Add(new Warp(
-						new Point(reader.Get<int>("X"), reader.Get<int>("Y")),
-						reader.Get<string>("WarpName"),
-						(reader.Get<string>("Private") ?? "0") != "0"));
-				}
-			}
+			warp.SaveAsync();
+			return true;
 		}
 
 		/// <summary>
@@ -105,33 +56,14 @@ namespace TShockAPI.DB
 		/// </summary>
 		/// <param name="warpName">The warp name.</param>
 		/// <returns>Whether the operation succeeded.</returns>
-		public bool Remove(string warpName)
-		{
-			try
-			{
-				if (database.Query("DELETE FROM Warps WHERE WarpName = @0 AND WorldID = @1",
-					warpName, Main.worldID.ToString()) > 0)
-				{
-					Warps.RemoveAll(w => String.Equals(w.Name, warpName, StringComparison.OrdinalIgnoreCase));
-					return true;
-				}
-			}
-			catch (Exception ex)
-			{
-				TShock.Log.Error(ex.ToString());
-			}
-			return false;
-		}
+		public void Remove(string warpName) => db.Find<Warp>().ManyAsync(x => x.Name == warpName).Result.ForEach(x => x.DeleteAsync());
 
 		/// <summary>
 		/// Finds the warp with the given name.
 		/// </summary>
 		/// <param name="warpName">The name.</param>
 		/// <returns>The warp, if it exists, or else null.</returns>
-		public Warp Find(string warpName)
-		{
-			return Warps.FirstOrDefault(w => String.Equals(w.Name, warpName, StringComparison.OrdinalIgnoreCase));
-		}
+		public Warp Find(string warpName) => db.Find<Warp>().ManyAsync(x => x.Name == warpName).Result.FirstOrDefault();
 
 		/// <summary>
 		/// Sets the position of a warp.
@@ -140,22 +72,11 @@ namespace TShockAPI.DB
 		/// <param name="x">The X position.</param>
 		/// <param name="y">The Y position.</param>
 		/// <returns>Whether the operation succeeded.</returns>
-		public bool Position(string warpName, int x, int y)
+		public void Position(string warpName, int x, int y)
 		{
-			try
-			{
-				if (database.Query("UPDATE Warps SET X = @0, Y = @1 WHERE WarpName = @2 AND WorldID = @3",
-					x, y, warpName, Main.worldID.ToString()) > 0)
-				{
-					Warps.Find(w => String.Equals(w.Name, warpName, StringComparison.OrdinalIgnoreCase)).Position = new Point(x, y);
-					return true;
-				}
-			}
-			catch (Exception ex)
-			{
-				TShock.Log.Error(ex.ToString());
-			}
-			return false;
+			Warp warp = db.Find<Warp>().ManyAsync(x => x.Name == warpName).Result.FirstOrDefault();
+			warp.Position = new(x, y);
+			warp.SaveAsync();
 		}
 
 		/// <summary>
@@ -166,54 +87,11 @@ namespace TShockAPI.DB
 		/// <returns>Whether the operation succeeded.</returns>
 		public bool Hide(string warpName, bool state)
 		{
-			try
-			{
-				if (database.Query("UPDATE Warps SET Private = @0 WHERE WarpName = @1 AND WorldID = @2",
-					state ? "1" : "0", warpName, Main.worldID.ToString()) > 0)
-				{
-					Warps.Find(w => String.Equals(w.Name, warpName, StringComparison.OrdinalIgnoreCase)).IsPrivate = state;
-					return true;
-				}
-			}
-			catch (Exception ex)
-			{
-				TShock.Log.Error(ex.ToString());
-			}
-			return false;
+			Warp warp = Find(warpName);
+			warp.IsPrivate = state;
+			return true;
 		}
 	}
 
-	/// <summary>
-	/// Represents a warp.
-	/// </summary>
-	public class Warp
-	{
-		/// <summary>
-		/// Gets or sets the name.
-		/// </summary>
-		public string Name { get; set; }
-		/// <summary>
-		/// Gets or sets the warp's privacy state.
-		/// </summary>
-		public bool IsPrivate { get; set; }
-		/// <summary>
-		/// Gets or sets the position.
-		/// </summary>
-		public Point Position { get; set; }
 
-		public Warp(Point position, string name, bool isPrivate = false)
-		{
-			Name = name;
-			Position = position;
-			IsPrivate = isPrivate;
-		}
-
-		/// <summary>Creates a warp with a default coordinate of zero, an empty name, public.</summary>
-		public Warp()
-		{
-			Position = Point.Zero;
-			Name = "";
-			IsPrivate = false;
-		}
-	}
 }

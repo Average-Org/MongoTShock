@@ -3055,7 +3055,7 @@ namespace TShockAPI
 				return true;
 			}
 
-			if (TShock.ProjectileBans.ProjectileIsBanned(type, args.Player) && !TShock.Config.Settings.IgnoreProjKill)
+			if (TShock.ProjectileBans.IsBanned(type, args.Player) && !TShock.Config.Settings.IgnoreProjKill)
 			{
 				// According to 2012 deathmax, this is a workaround to fix skeletron prime issues
 				// https://github.com/Pryaxis/TShock/commit/a5aa9231239926f361b7246651e32144bbf28dda

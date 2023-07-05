@@ -16,11 +16,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
- using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Newtonsoft.Json;
+using System;
 using Terraria;
 
 namespace TShockAPI
@@ -29,74 +26,74 @@ namespace TShockAPI
 	/// Represents an item.
 	/// </summary>
 	[JsonObject(MemberSerialization.OptIn)]
-	public struct NetItem
+	public class NetItem : Entity
 	{
 		/// <summary>
 		/// 40 - The number of slots in a piggy bank
 		/// </summary>
-		public static readonly int PiggySlots = 40;
+		public const int PiggySlots = 40;
 
 		/// <summary>
 		/// 40 - The number of slots in a safe
 		/// </summary>
-		public static readonly int SafeSlots = PiggySlots;
+		public const int SafeSlots = PiggySlots;
 
 		/// <summary>
 		/// 40 - The number of slots in a forge
 		/// </summary>
-		public static readonly int ForgeSlots = SafeSlots;
+		public const int ForgeSlots = SafeSlots;
 
 		/// <summary>
 		/// 40 - The number of slots in a void vault
 		/// </summary>
-		public static readonly int VoidSlots = ForgeSlots;
+		public const int VoidSlots = ForgeSlots;
 
 		/// <summary>
 		/// 59 - The size of the player's inventory (inventory, coins, ammo, held item)
 		/// </summary>
-		public static readonly int InventorySlots = 59;
-
+		public const int InventorySlots = 59;
+		
 		/// <summary>
 		/// 20 - The number of armor slots.
 		/// </summary>
-		public static readonly int ArmorSlots = 20;
+		public const int ArmorSlots = 20;
 
 		/// <summary>
 		/// 5 - The number of other equippable items
 		/// </summary>
-		public static readonly int MiscEquipSlots = 5;
+		public const int MiscEquipSlots = 5;
 
 		/// <summary>
 		/// 10 - The number of dye slots.
 		/// </summary>
-		public static readonly int DyeSlots = 10;
+		public const int DyeSlots = 10;
 
 		/// <summary>
 		/// 5 - The number of other dye slots (for <see cref="MiscEquipSlots"/>)
 		/// </summary>
-		public static readonly int MiscDyeSlots = MiscEquipSlots;
+		public const int MiscDyeSlots = MiscEquipSlots;
 
 		/// <summary>
 		/// 1 - The number of trash can slots.
 		/// </summary>
-		public static readonly int TrashSlots = 1;
+		public const int TrashSlots = 1;
 
 		/// <summary>
 		/// The number of armor slots in a loadout.
 		/// </summary>
-		public static readonly int LoadoutArmorSlots = ArmorSlots;
+		public const int LoadoutArmorSlots = ArmorSlots;
 
 		/// <summary>
 		/// The number of dye slots in a loadout.
 		/// </summary>
-		public static readonly int LoadoutDyeSlots = DyeSlots;
+		public const int LoadoutDyeSlots = DyeSlots;
 
 		/// <summary>
 		/// 180 - The inventory size (inventory, held item, armour, dies, coins, ammo, piggy, safe, and trash)
 		/// </summary>
-		public static readonly int MaxInventory = InventorySlots + ArmorSlots + DyeSlots + MiscEquipSlots + MiscDyeSlots + PiggySlots +
-		                                          SafeSlots + ForgeSlots + VoidSlots + TrashSlots + (LoadoutArmorSlots * 3) +
-		                                          (LoadoutDyeSlots * 3);
+		public const int MaxInventory = InventorySlots + ArmorSlots + DyeSlots + MiscEquipSlots + MiscDyeSlots + PiggySlots +
+												  SafeSlots + ForgeSlots + VoidSlots + TrashSlots + (LoadoutArmorSlots * 3) +
+												  (LoadoutDyeSlots * 3);
 
 		public static readonly Tuple<int, int> InventoryIndex = new Tuple<int, int>(0, InventorySlots);
 		public static readonly Tuple<int, int> ArmorIndex = new Tuple<int, int>(InventoryIndex.Item2, InventoryIndex.Item2 + ArmorSlots);
@@ -128,26 +125,17 @@ namespace TShockAPI
 		/// <summary>
 		/// Gets the net ID.
 		/// </summary>
-		public int NetId
-		{
-			get { return _netId; }
-		}
+		public int NetId => _netId;
 
 		/// <summary>
 		/// Gets the prefix.
 		/// </summary>
-		public byte PrefixId
-		{
-			get { return _prefixId; }
-		}
+		public byte PrefixId => _prefixId;
 
 		/// <summary>
 		/// Gets the stack.
 		/// </summary>
-		public int Stack
-		{
-			get { return _stack; }
-		}
+		public int Stack => _stack;
 
 		/// <summary>
 		/// Creates a new <see cref="NetItem"/>.
@@ -162,14 +150,15 @@ namespace TShockAPI
 			_prefixId = prefixId;
 		}
 
+		public NetItem()
+		{
+		}
+
 		/// <summary>
 		/// Converts the <see cref="NetItem"/> to a string.
 		/// </summary>
 		/// <returns></returns>
-		public override string ToString()
-		{
-			return String.Format("{0},{1},{2}", _netId, _stack, _prefixId);
-		}
+		public override string ToString() => string.Format("{0},{1},{2}", _netId, _stack, _prefixId);
 
 		/// <summary>
 		/// Converts a string into a <see cref="NetItem"/>.
@@ -199,11 +188,8 @@ namespace TShockAPI
 		/// </summary>
 		/// <param name="item">The <see cref="Item"/>.</param>
 		/// <returns></returns>
-		public static explicit operator NetItem(Item item)
-		{
-			return item == null
+		public static explicit operator NetItem(Item item) => item == null
 				? new NetItem()
 				: new NetItem(item.netID, item.stack, item.prefix);
-		}
 	}
 }

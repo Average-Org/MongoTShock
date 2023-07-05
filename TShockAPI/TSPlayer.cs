@@ -22,19 +22,18 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Text;
+using System.Linq;
 using System.Threading;
 using System.Timers;
 using Terraria;
 using Terraria.DataStructures;
+using Terraria.GameContent.Creative;
 using Terraria.ID;
 using Terraria.Localization;
 using TShockAPI.DB;
 using TShockAPI.Hooks;
 using TShockAPI.Net;
 using Timer = System.Timers.Timer;
-using System.Linq;
-using Terraria.GameContent.Creative;
 
 namespace TShockAPI
 {
@@ -201,7 +200,7 @@ namespace TShockAPI
 					return tempGroup;
 				return group;
 			}
-			set { group = value; }
+			set => group = value;
 		}
 
 		/// <summary>
@@ -353,10 +352,7 @@ namespace TShockAPI
 
 		/// <summary>Checks to see if active throttling is happening on events by Bouncer. Rejects repeated events by malicious clients in a short window.</summary>
 		/// <returns>If the player is currently being throttled by Bouncer, or not.</returns>
-		public bool IsBouncerThrottled()
-		{
-			return (DateTime.UtcNow - LastThreat).TotalMilliseconds < 5000;
-		}
+		public bool IsBouncerThrottled() => (DateTime.UtcNow - LastThreat).TotalMilliseconds < 5000;
 
 		/// <summary>Easy check if a player has any of IsDisabledForSSC, IsDisabledForStackDetection, IsDisabledForBannedWearable, or IsDisabledPendingTrashRemoval set. Or if they're not logged in and a login is required.</summary>
 		/// <returns>If any of the checks that warrant disabling are set on this player. If true, Disable() is repeatedly called on them.</returns>
@@ -366,7 +362,7 @@ namespace TShockAPI
 			|| IsDisabledForStackDetection
 			|| IsDisabledForBannedWearable
 			|| IsDisabledPendingTrashRemoval
-			|| !IsLoggedIn && TShock.Config.Settings.RequireLogin;
+			|| (!IsLoggedIn && TShock.Config.Settings.RequireLogin);
 		}
 
 		/// <summary>Checks to see if a player has hacked item stacks in their inventory, and messages them as it checks.</summary>
@@ -869,10 +865,7 @@ namespace TShockAPI
 		/// <param name="x">The x coordinate they want to paint at.</param>
 		/// <param name="y">The y coordinate they want to paint at.</param>
 		/// <returns>True if they can paint.</returns>
-		public bool HasPaintPermission(int x, int y)
-		{
-			return HasBuildPermission(x, y) && HasPermission(Permissions.canpaint);
-		}
+		public bool HasPaintPermission(int x, int y) => HasBuildPermission(x, y) && HasPermission(Permissions.canpaint);
 
 		/// <summary>Checks if a player can place ice, and if they can, tracks ice placements and removals.</summary>
 		/// <param name="x">The x coordinate of the suspected ice block.</param>
@@ -975,47 +968,32 @@ namespace TShockAPI
 		/// <summary>
 		/// Whether the player is a real, human, player on the server.
 		/// </summary>
-		public bool RealPlayer
-		{
-			get { return Index >= 0 && Index < Main.maxNetPlayers && Main.player[Index] != null; }
-		}
+		public bool RealPlayer => Index >= 0 && Index < Main.maxNetPlayers && Main.player[Index] != null;
 
 		/// <summary>
 		/// Checks if the player is active and not pending termination.
 		/// </summary>
-		public bool ConnectionAlive
-		{
-			get
-			{
-				return RealPlayer
-					   && (Client != null && Client.IsActive && !Client.PendingTermination);
-			}
-		}
+		public bool ConnectionAlive => RealPlayer
+					   && Client != null && Client.IsActive && !Client.PendingTermination;
 
 		/// <summary>
 		/// Gets the item that the player is currently holding.
 		/// </summary>
-		public Item SelectedItem
-		{
-			get { return TPlayer.inventory[TPlayer.selectedItem]; }
-		}
+		public Item SelectedItem => TPlayer.inventory[TPlayer.selectedItem];
 
 		/// <summary>
 		/// Gets the player's Client State.
 		/// </summary>
 		public int State
 		{
-			get { return Client.State; }
-			set { Client.State = value; }
+			get => Client.State;
+			set => Client.State = value;
 		}
 
 		/// <summary>
 		/// Gets the player's UUID.
 		/// </summary>
-		public string UUID
-		{
-			get { return RealPlayer ? Client.ClientUUID : ""; }
-		}
+		public string UUID => RealPlayer ? Client.ClientUUID : "";
 
 		/// <summary>
 		/// Gets the player's IP.
@@ -1118,34 +1096,22 @@ namespace TShockAPI
 		/// <summary>
 		/// Gets the Terraria Player object associated with the player.
 		/// </summary>
-		public Player TPlayer
-		{
-			get { return FakePlayer ?? Main.player[Index]; }
-		}
+		public Player TPlayer => FakePlayer ?? Main.player[Index];
 
 		/// <summary>
 		/// Gets the player's name.
 		/// </summary>
-		public string Name
-		{
-			get { return TPlayer.name; }
-		}
+		public string Name => TPlayer.name;
 
 		/// <summary>
 		/// Gets the player's active state.
 		/// </summary>
-		public bool Active
-		{
-			get { return TPlayer != null && TPlayer.active; }
-		}
+		public bool Active => TPlayer != null && TPlayer.active;
 
 		/// <summary>
 		/// Gets the player's team.
 		/// </summary>
-		public int Team
-		{
-			get { return TPlayer.team; }
-		}
+		public int Team => TPlayer.team;
 
 		/// <summary>
 		/// Gets PvP player mode.
@@ -1155,34 +1121,22 @@ namespace TShockAPI
 		/// <summary>
 		/// Gets the player's X coordinate.
 		/// </summary>
-		public float X
-		{
-			get { return RealPlayer ? TPlayer.position.X : Main.spawnTileX * 16; }
-		}
+		public float X => RealPlayer ? TPlayer.position.X : Main.spawnTileX * 16;
 
 		/// <summary>
 		/// Gets the player's Y coordinate.
 		/// </summary>
-		public float Y
-		{
-			get { return RealPlayer ? TPlayer.position.Y : Main.spawnTileY * 16; }
-		}
+		public float Y => RealPlayer ? TPlayer.position.Y : Main.spawnTileY * 16;
 
 		/// <summary>
 		/// Player X coordinate divided by 16. Supposed X world coordinate.
 		/// </summary>
-		public int TileX
-		{
-			get { return (int)(X / 16); }
-		}
+		public int TileX => (int)(X / 16);
 
 		/// <summary>
 		/// Player Y coordinate divided by 16. Supposed Y world coordinate.
 		/// </summary>
-		public int TileY
-		{
-			get { return (int)(Y / 16); }
-		}
+		public int TileY => (int)(Y / 16);
 
 		/// <summary>
 		/// Checks if the player has any inventory slots available.
@@ -1217,10 +1171,7 @@ namespace TShockAPI
 		/// </summary>
 		/// <param name="key">Key to test.</param>
 		/// <returns></returns>
-		public bool ContainsData(string key)
-		{
-			return data.ContainsKey(key);
-		}
+		public bool ContainsData(string key) => data.ContainsKey(key);
 
 		/// <summary>
 		/// Returns the stored object associated with the given key.
@@ -1327,10 +1278,7 @@ namespace TShockAPI
 		/// Disconnects the player from the server.
 		/// </summary>
 		/// <param name="reason">The reason why the player was disconnected.</param>
-		public virtual void Disconnect(string reason)
-		{
-			SendData(PacketTypes.Disconnect, reason);
-		}
+		public virtual void Disconnect(string reason) => SendData(PacketTypes.Disconnect, reason);
 
 		/// <summary>
 		/// Fired when the player's temporary group access expires.
@@ -1384,10 +1332,7 @@ namespace TShockAPI
 		/// Heals the player.
 		/// </summary>
 		/// <param name="health">Heal health amount.</param>
-		public void Heal(int health = 600)
-		{
-			NetMessage.SendData((int)PacketTypes.PlayerHealOther, -1, -1, NetworkText.Empty, this.TPlayer.whoAmI, health);
-		}
+		public void Heal(int health = 600) => NetMessage.SendData((int)PacketTypes.PlayerHealOther, -1, -1, NetworkText.Empty, this.TPlayer.whoAmI, health);
 
 		/// <summary>
 		/// Spawns the player at his spawn point.
@@ -1461,10 +1406,7 @@ namespace TShockAPI
 		/// <param name="size">The size square set of tiles to send.</param>
 		/// <returns>true if the tile square was sent successfully, else false</returns>
 		[Obsolete("This method may not send tiles the way you would expect it to. The (x,y) coordinates are the top left corner of the tile square, switch to " + nameof(SendTileSquareCentered) + " if you wish for the coordindates to be the center of the square.")]
-		public virtual bool SendTileSquare(int x, int y, int size = 10)
-		{
-			return SendTileRect((short)x, (short)y, (byte)size, (byte)size);
-		}
+		public virtual bool SendTileSquare(int x, int y, int size = 10) => SendTileRect((short)x, (short)y, (byte)size, (byte)size);
 
 		/// <summary>
 		/// Sends a tile square at a center location with a given size.
@@ -1476,10 +1418,7 @@ namespace TShockAPI
 		/// <param name="y">The y coordinates of the center of the square.</param>
 		/// <param name="size">The size square set of tiles to send.</param>
 		/// <returns>true if the tile square was sent successfully, else false</returns>
-		public virtual bool SendTileSquareCentered(int x, int y, byte size = 10)
-		{
-			return SendTileRect((short)(x - (size / 2)), (short)(y - (size / 2)), size, size);
-		}
+		public virtual bool SendTileSquareCentered(int x, int y, byte size = 10) => SendTileRect((short)(x - (size / 2)), (short)(y - (size / 2)), size, size);
 
 		/// <summary>
 		/// Sends a rectangle of tiles at a location with the given length and width.
@@ -1525,7 +1464,7 @@ namespace TShockAPI
 					{
 						Client.TileSections[i, j] = isLoaded;
 					}
-				}	
+				}
 			}
 			else
 			{
@@ -1549,8 +1488,8 @@ namespace TShockAPI
 		/// <returns>True or false, depending if the item passed the check or not.</returns>
 		public bool GiveItemCheck(int type, string name, int stack, int prefix = 0)
 		{
-			if ((TShock.ItemBans.DataModel.ItemIsBanned(name) && TShock.Config.Settings.PreventBannedItemSpawn) &&
-				(TShock.ItemBans.DataModel.ItemIsBanned(name, this) || !TShock.Config.Settings.AllowAllowedGroupsToSpawnBannedItems))
+			if (TShock.ItemBans.DataModel.IsBanned(name) && TShock.Config.Settings.PreventBannedItemSpawn &&
+				(TShock.ItemBans.DataModel.IsBanned(name, this) || !TShock.Config.Settings.AllowAllowedGroupsToSpawnBannedItems))
 				return false;
 
 			GiveItem(type, stack, prefix);
@@ -1575,10 +1514,7 @@ namespace TShockAPI
 		/// Gives an item to the player.
 		/// </summary>
 		/// <param name="item">Item with data to be given to the player.</param>
-		public virtual void GiveItem(NetItem item)
-		{
-			GiveItem(item.NetId, item.Stack, item.PrefixId);
-		}
+		public virtual void GiveItem(NetItem item) => GiveItem(item.NetId, item.Stack, item.PrefixId);
 
 		private Item EmptySentinelItem = new Item();
 
@@ -1693,10 +1629,7 @@ namespace TShockAPI
 		/// Sends an information message to the player.
 		/// </summary>
 		/// <param name="msg">The message.</param>
-		public virtual void SendInfoMessage(string msg)
-		{
-			SendMessage(msg, Color.Yellow);
-		}
+		public virtual void SendInfoMessage(string msg) => SendMessage(msg, Color.Yellow);
 
 		/// <summary>
 		/// Sends an information message to the player.
@@ -1704,19 +1637,13 @@ namespace TShockAPI
 		/// </summary>
 		/// <param name="format">The message.</param>
 		/// <param name="args">An array of objects to format.</param>
-		public void SendInfoMessage(string format, params object[] args)
-		{
-			SendInfoMessage(string.Format(format, args));
-		}
+		public void SendInfoMessage(string format, params object[] args) => SendInfoMessage(string.Format(format, args));
 
 		/// <summary>
 		/// Sends a success message to the player.
 		/// </summary>
 		/// <param name="msg">The message.</param>
-		public virtual void SendSuccessMessage(string msg)
-		{
-			SendMessage(msg, Color.LimeGreen);
-		}
+		public virtual void SendSuccessMessage(string msg) => SendMessage(msg, Color.LimeGreen);
 
 		/// <summary>
 		/// Sends a success message to the player.
@@ -1724,19 +1651,13 @@ namespace TShockAPI
 		/// </summary>
 		/// <param name="format">The message.</param>
 		/// <param name="args">An array of objects to format.</param>
-		public void SendSuccessMessage(string format, params object[] args)
-		{
-			SendSuccessMessage(string.Format(format, args));
-		}
+		public void SendSuccessMessage(string format, params object[] args) => SendSuccessMessage(string.Format(format, args));
 
 		/// <summary>
 		/// Sends a warning message to the player.
 		/// </summary>
 		/// <param name="msg">The message.</param>
-		public virtual void SendWarningMessage(string msg)
-		{
-			SendMessage(msg, Color.OrangeRed);
-		}
+		public virtual void SendWarningMessage(string msg) => SendMessage(msg, Color.OrangeRed);
 
 		/// <summary>
 		/// Sends a warning message to the player.
@@ -1744,19 +1665,13 @@ namespace TShockAPI
 		/// </summary>
 		/// <param name="format">The message.</param>
 		/// <param name="args">An array of objects to format.</param>
-		public void SendWarningMessage(string format, params object[] args)
-		{
-			SendWarningMessage(string.Format(format, args));
-		}
+		public void SendWarningMessage(string format, params object[] args) => SendWarningMessage(string.Format(format, args));
 
 		/// <summary>
 		/// Sends an error message to the player.
 		/// </summary>
 		/// <param name="msg">The message.</param>
-		public virtual void SendErrorMessage(string msg)
-		{
-			SendMessage(msg, Color.Red);
-		}
+		public virtual void SendErrorMessage(string msg) => SendMessage(msg, Color.Red);
 
 		/// <summary>
 		/// Sends an error message to the player.
@@ -1764,20 +1679,14 @@ namespace TShockAPI
 		/// </summary>
 		/// <param name="format">The message.</param>
 		/// <param name="args">An array of objects to format.</param>
-		public void SendErrorMessage(string format, params object[] args)
-		{
-			SendErrorMessage(string.Format(format, args));
-		}
+		public void SendErrorMessage(string format, params object[] args) => SendErrorMessage(string.Format(format, args));
 
 		/// <summary>
 		/// Sends a message with the specified color.
 		/// </summary>
 		/// <param name="msg">The message.</param>
 		/// <param name="color">The message color.</param>
-		public virtual void SendMessage(string msg, Color color)
-		{
-			SendMessage(msg, color.R, color.G, color.B);
-		}
+		public virtual void SendMessage(string msg, Color color) => SendMessage(msg, color.R, color.G, color.B);
 
 		/// <summary>
 		/// Sends a message with the specified RGB color.
@@ -1837,7 +1746,6 @@ namespace TShockAPI
 		public void SendFileTextAsMessage(string file)
 		{
 			string foo = "";
-			bool containsOldFormat = false;
 			using (var tr = new StreamReader(file))
 			{
 				Color lineColor;
@@ -1859,7 +1767,7 @@ namespace TShockAPI
 						}
 					}
 
-					foo = foo.Replace("%map%", (TShock.Config.Settings.UseServerName ? TShock.Config.Settings.ServerName : Main.worldName));
+					foo = foo.Replace("%map%", TShock.Config.Settings.UseServerName ? TShock.Config.Settings.ServerName : Main.worldName);
 					foo = foo.Replace("%players%", String.Join(", ", players));
 					foo = foo.Replace("%specifier%", TShock.Config.Settings.CommandSpecifier);
 					foo = foo.Replace("%onlineplayers%", TShock.Utils.GetActivePlayerCount().ToString());
@@ -1874,37 +1782,25 @@ namespace TShockAPI
 		/// Wounds the player with the given damage.
 		/// </summary>
 		/// <param name="damage">The amount of damage the player will take.</param>
-		public virtual void DamagePlayer(int damage)
-		{
-			DamagePlayer(damage, PlayerDeathReason.LegacyDefault());
-		}
+		public virtual void DamagePlayer(int damage) => DamagePlayer(damage, PlayerDeathReason.LegacyDefault());
 
 		/// <summary>
 		/// Wounds the player with the given damage.
 		/// </summary>
 		/// <param name="damage">The amount of damage the player will take.</param>
 		/// <param name="reason">The reason for causing damage to player.</param>
-		public virtual void DamagePlayer(int damage, PlayerDeathReason reason)
-		{
-			NetMessage.SendPlayerHurt(Index, reason, damage, (new Random()).Next(-1, 1), false, false, 0, -1, -1);
-		}
+		public virtual void DamagePlayer(int damage, PlayerDeathReason reason) => NetMessage.SendPlayerHurt(Index, reason, damage, new Random().Next(-1, 1), false, false, 0, -1, -1);
 
 		/// <summary>
 		/// Kills the player.
 		/// </summary>
-		public virtual void KillPlayer()
-		{
-			KillPlayer(PlayerDeathReason.LegacyDefault());
-		}
+		public virtual void KillPlayer() => KillPlayer(PlayerDeathReason.LegacyDefault());
 
 		/// <summary>
 		/// Kills the player.
 		/// </summary>
 		/// <param name="reason">Reason for killing a player.</param>
-		public virtual void KillPlayer(PlayerDeathReason reason)
-		{
-			NetMessage.SendPlayerDeath(Index, reason, 99999, (new Random()).Next(-1, 1), false, -1, -1);
-		}
+		public virtual void KillPlayer(PlayerDeathReason reason) => NetMessage.SendPlayerDeath(Index, reason, 99999, new Random().Next(-1, 1), false, -1, -1);
 
 		/// <summary>
 		/// Sets the player's team.
@@ -2192,10 +2088,7 @@ namespace TShockAPI
 		/// </summary>
 		/// <param name="bannedItem">The <see cref="ItemBan" /> to check.</param>
 		/// <returns>True if the player has permission to use the banned item.</returns>
-		public bool HasPermission(ItemBan bannedItem)
-		{
-			return TShock.ItemBans.DataModel.ItemIsBanned(bannedItem.Name, this);
-		}
+		public bool HasPermission(ItemBan bannedItem) => TShock.ItemBans.DataModel.IsBanned(bannedItem.Name, this);
 
 		/// <summary>
 		/// Checks to see if a player has permission to use the specific banned projectile.
@@ -2203,20 +2096,14 @@ namespace TShockAPI
 		/// </summary>
 		/// <param name="bannedProj">The <see cref="ProjectileBan" /> to check.</param>
 		/// <returns>True if the player has permission to use the banned projectile.</returns>
-		public bool HasPermission(ProjectileBan bannedProj)
-		{
-			return TShock.ProjectileBans.ProjectileIsBanned(bannedProj.ID, this);
-		}
+		public bool HasPermission(ProjectileBan bannedProj) => TShock.ProjectileBans.ProjectileIsBanned(bannedProj.ID, this);
 		/// <summary>
 		/// Checks to see if a player has permission to use the specific banned tile.
 		/// Fires the <see cref="PlayerHooks.OnPlayerTilebanPermission"/> hook which may be handled to override tile ban permission checks.
 		/// </summary>
 		/// <param name="bannedTile">The <see cref="TileBan" /> to check.</param>
 		/// <returns>True if the player has permission to use the banned tile.</returns>
-		public bool HasPermission(TileBan bannedTile)
-		{
-			return TShock.TileBans.TileIsBanned(bannedTile.ID, this);
-		}
+		public bool HasPermission(TileBan bannedTile) => TShock.TileBans.TileIsBanned(bannedTile.ID, this);
 	}
 
 	public class TSRestPlayer : TSPlayer
@@ -2229,39 +2116,18 @@ namespace TShockAPI
 			AwaitingResponse = new Dictionary<string, Action<object>>();
 		}
 
-		public override void SendMessage(string msg, Color color)
-		{
-			SendMessage(msg, color.R, color.G, color.B);
-		}
+		public override void SendMessage(string msg, Color color) => SendMessage(msg, color.R, color.G, color.B);
 
-		public override void SendMessage(string msg, byte red, byte green, byte blue)
-		{
-			this.CommandOutput.Add(msg);
-		}
+		public override void SendMessage(string msg, byte red, byte green, byte blue) => this.CommandOutput.Add(msg);
 
-		public override void SendInfoMessage(string msg)
-		{
-			SendMessage(msg, Color.Yellow);
-		}
+		public override void SendInfoMessage(string msg) => SendMessage(msg, Color.Yellow);
 
-		public override void SendSuccessMessage(string msg)
-		{
-			SendMessage(msg, Color.Green);
-		}
+		public override void SendSuccessMessage(string msg) => SendMessage(msg, Color.Green);
 
-		public override void SendWarningMessage(string msg)
-		{
-			SendMessage(msg, Color.OrangeRed);
-		}
+		public override void SendWarningMessage(string msg) => SendMessage(msg, Color.OrangeRed);
 
-		public override void SendErrorMessage(string msg)
-		{
-			SendMessage(msg, Color.Red);
-		}
+		public override void SendErrorMessage(string msg) => SendMessage(msg, Color.Red);
 
-		public List<string> GetCommandOutput()
-		{
-			return this.CommandOutput;
-		}
+		public List<string> GetCommandOutput() => this.CommandOutput;
 	}
 }

@@ -1125,7 +1125,7 @@ namespace TShockAPI
 
 			Item item = new Item();
 			item.netDefaults(type);
-			if ((stacks > item.maxStack || stacks <= 0) || (TShock.ItemBans.DataModel.ItemIsBanned(EnglishLanguage.GetItemNameById(item.type), args.Player) && !args.Player.HasPermission(Permissions.allowdroppingbanneditems)))
+			if ((stacks > item.maxStack || stacks <= 0) || (TShock.ItemBans.DataModel.IsBanned(EnglishLanguage.GetItemNameById(item.type), args.Player) && !args.Player.HasPermission(Permissions.allowdroppingbanneditems)))
 			{
 				TShock.Log.ConsoleDebug(GetString("Bouncer / OnItemDrop rejected from drop item ban check / max stack check / min stack check from {0}", args.Player.Name));
 				args.Player.SendData(PacketTypes.ItemDrop, "", id);
@@ -1177,7 +1177,7 @@ namespace TShockAPI
 				return;
 			}
 
-			if (TShock.ProjectileBans.ProjectileIsBanned(type, args.Player))
+			if (TShock.ProjectileBans.IsBanned(type, args.Player))
 			{
 				args.Player.Disable(GetString("Player does not have permission to create projectile {0}.", type), DisableFlags.WriteToLogAndConsole);
 				TShock.Log.ConsoleDebug(GetString("Bouncer / OnNewProjectile rejected from permission check from {0} {1}", args.Player.Name, type));
@@ -1735,7 +1735,7 @@ namespace TShockAPI
 					args.Handled = true;
 				}
 
-				if (TShock.ItemBans.DataModel.ItemIsBanned(EnglishLanguage.GetItemNameById(selectedItemType), args.Player))
+				if (TShock.ItemBans.DataModel.IsBanned(EnglishLanguage.GetItemNameById(selectedItemType), args.Player))
 				{
 					Reject(GetString("Using banned {0} to manipulate liquid", Lang.GetItemNameValue(selectedItemType)));
 					return;
@@ -1744,28 +1744,28 @@ namespace TShockAPI
 				switch (type)
 				{
 					case LiquidType.Water:
-						if (TShock.ItemBans.DataModel.ItemIsBanned(EnglishLanguage.GetItemNameById(ItemID.WaterBucket), args.Player))
+						if (TShock.ItemBans.DataModel.IsBanned(EnglishLanguage.GetItemNameById(ItemID.WaterBucket), args.Player))
 						{
 							Reject(GetString("Using banned water bucket without permissions"));
 							return;
 						}
 						break;
 					case LiquidType.Lava:
-						if (TShock.ItemBans.DataModel.ItemIsBanned(EnglishLanguage.GetItemNameById(ItemID.LavaBucket), args.Player))
+						if (TShock.ItemBans.DataModel.IsBanned(EnglishLanguage.GetItemNameById(ItemID.LavaBucket), args.Player))
 						{
 							Reject(GetString("Using banned lava bucket without permissions"));
 							return;
 						}
 						break;
 					case LiquidType.Honey:
-						if (TShock.ItemBans.DataModel.ItemIsBanned(EnglishLanguage.GetItemNameById(ItemID.HoneyBucket), args.Player))
+						if (TShock.ItemBans.DataModel.IsBanned(EnglishLanguage.GetItemNameById(ItemID.HoneyBucket), args.Player))
 						{
 							Reject(GetString("Using banned honey bucket without permissions"));
 							return;
 						}
 						break;
 					case LiquidType.Shimmer:
-						if (TShock.ItemBans.DataModel.ItemIsBanned(EnglishLanguage.GetItemNameById(ItemID.BottomlessShimmerBucket), args.Player))
+						if (TShock.ItemBans.DataModel.IsBanned(EnglishLanguage.GetItemNameById(ItemID.BottomlessShimmerBucket), args.Player))
 						{
 							Reject(GetString("Using banned shimmering water bucket without permissions"));
 							return;

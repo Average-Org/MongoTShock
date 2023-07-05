@@ -1,0 +1,145 @@
+﻿namespace TShockAPI.Data
+{
+	public class DefaultPermissions
+	{
+		public static string[] Guest = new string[]
+		{
+			Permissions.canbuild,
+			Permissions.canregister,
+			Permissions.canlogin,
+			Permissions.canpartychat,
+			Permissions.cantalkinthird,
+			Permissions.canchat,
+			Permissions.synclocalarea,
+			Permissions.sendemoji
+		};
+
+		public static string[] Default = new string[]
+		{
+			Permissions.warp,
+			Permissions.canchangepassword,
+			Permissions.canlogout,
+			Permissions.summonboss,
+			Permissions.whisper,
+			Permissions.wormhole,
+			Permissions.canpaint,
+			Permissions.pylon,
+			Permissions.tppotion,
+			Permissions.magicconch,
+			Permissions.demonconch
+		};
+
+		public static string[] VIP = new string[]
+		{
+			Permissions.reservedslot,
+			Permissions.renamenpc,
+			Permissions.startinvasion,
+			Permissions.summonboss,
+			Permissions.whisper,
+			Permissions.wormhole
+		};
+
+		public static string[] Mod = new string[]
+		{
+			Permissions.kick,
+			Permissions.editspawn,
+			Permissions.reservedslot,
+			Permissions.annoy,
+			Permissions.checkaccountinfo,
+			Permissions.getpos,
+			Permissions.mute,
+			Permissions.rod,
+			Permissions.savessc,
+			Permissions.seeids,
+			Permissions.ban,
+			Permissions.whitelist,
+			Permissions.spawnboss,
+			Permissions.spawnmob,
+			Permissions.managewarp,
+			Permissions.time,
+			Permissions.tp,
+			Permissions.slap,
+			Permissions.kill,
+			Permissions.logs,
+			Permissions.immunetokick,
+			Permissions.tpothers,
+			Permissions.advaccountinfo,
+			Permissions.broadcast,
+			Permissions.home,
+			Permissions.tpallothers,
+			Permissions.tpallow,
+			Permissions.tpnpc,
+			Permissions.tppos,
+			Permissions.tpsilent,
+			Permissions.userinfo,
+			Permissions.spawn
+		};
+
+		public static string[] Admin = new string[]
+		{
+			Permissions.maintenance,
+			"tshock.cfg.*",
+			"tshock.world.*",
+			Permissions.butcher,
+			Permissions.item,
+			Permissions.give,
+			Permissions.heal,
+			Permissions.immunetoban,
+			Permissions.usebanneditem,
+			Permissions.allowclientsideworldedit,
+			Permissions.buff,
+			Permissions.buffplayer,
+			Permissions.clear,
+			Permissions.clearangler,
+			Permissions.godmode,
+			Permissions.godmodeother,
+			Permissions.ignoredamagecap,
+			Permissions.ignorehp,
+			Permissions.ignorekilltiledetection,
+			Permissions.ignoreliquidsetdetection,
+			Permissions.ignoremp,
+			Permissions.ignorepaintdetection,
+			Permissions.ignoreplacetiledetection,
+			Permissions.ignoreprojectiledetection,
+			Permissions.ignorestackhackdetection,
+			Permissions.invade,
+			Permissions.startdd2,
+			Permissions.uploaddata,
+			Permissions.uploadothersdata,
+			Permissions.spawnpets,
+			Permissions.journey_timefreeze,
+			Permissions.journey_timeset,
+			Permissions.journey_timespeed,
+			Permissions.journey_godmode,
+			Permissions.journey_windstrength,
+			Permissions.journey_windfreeze,
+			Permissions.journey_rainstrength,
+			Permissions.journey_rainfreeze,
+			Permissions.journey_placementrange,
+			Permissions.journey_setdifficulty,
+			Permissions.journey_biomespreadfreeze,
+			Permissions.journey_setspawnrate,
+			Permissions.journey_contributeresearch
+		};
+
+		public static string[] Owner = new string[]
+		{
+			Permissions.su,
+			Permissions.allowdroppingbanneditems,
+			Permissions.antibuild,
+			Permissions.canusebannedprojectiles,
+			Permissions.canusebannedtiles,
+			Permissions.managegroup,
+			Permissions.manageitem,
+			Permissions.manageprojectile,
+			Permissions.manageregion,
+			Permissions.managetile,
+			Permissions.maxspawns,
+			Permissions.serverinfo,
+			Permissions.settempgroup,
+			Permissions.spawnrate,
+			Permissions.tpoverride,
+			Permissions.createdumps
+		};
+	}
+}

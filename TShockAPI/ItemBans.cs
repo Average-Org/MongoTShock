@@ -52,7 +52,7 @@ namespace TShockAPI
 		/// <returns>A new item ban system.</returns>
 		internal ItemBans(TShock plugin, IDbConnection database)
 		{
-			DataModel = new ItemManager(database);
+			DataModel = new ItemManager();
 			Plugin = plugin;
 
 			ServerApi.Hooks.GameUpdate.Register(plugin, OnGameUpdate);
@@ -88,7 +88,7 @@ namespace TShockAPI
 				UnTaint(player);
 
 				// No matter the player type, we do a check when a player is holding an item that's banned.
-				if (DataModel.ItemIsBanned(EnglishLanguage.GetItemNameById(player.TPlayer.inventory[player.TPlayer.selectedItem].netID), player))
+				if (DataModel.IsBanned(EnglishLanguage.GetItemNameById(player.TPlayer.inventory[player.TPlayer.selectedItem].netID), player))
 				{
 					string itemName = player.TPlayer.inventory[player.TPlayer.selectedItem].Name;
 					player.Disable(GetString($"holding banned item: {itemName}"), disableFlags);
@@ -105,7 +105,7 @@ namespace TShockAPI
 					// Armor ban checks
 					foreach (Item item in player.TPlayer.armor)
 					{
-						if (DataModel.ItemIsBanned(EnglishLanguage.GetItemNameById(item.type), player))
+						if (DataModel.IsBanned(EnglishLanguage.GetItemNameById(item.type), player))
 						{
 							Taint(player);
 							SendCorrectiveMessage(player, item.Name);
@@ -115,7 +115,7 @@ namespace TShockAPI
 					// Dye ban checks
 					foreach (Item item in player.TPlayer.dye)
 					{
-						if (DataModel.ItemIsBanned(EnglishLanguage.GetItemNameById(item.type), player))
+						if (DataModel.IsBanned(EnglishLanguage.GetItemNameById(item.type), player))
 						{
 							Taint(player);
 							SendCorrectiveMessage(player, item.Name);
@@ -125,7 +125,7 @@ namespace TShockAPI
 					// Misc equip ban checks
 					foreach (Item item in player.TPlayer.miscEquips)
 					{
-						if (DataModel.ItemIsBanned(EnglishLanguage.GetItemNameById(item.type), player))
+						if (DataModel.IsBanned(EnglishLanguage.GetItemNameById(item.type), player))
 						{
 							Taint(player);
 							SendCorrectiveMessage(player, item.Name);
@@ -135,7 +135,7 @@ namespace TShockAPI
 					// Misc dye ban checks
 					foreach (Item item in player.TPlayer.miscDyes)
 					{
-						if (DataModel.ItemIsBanned(EnglishLanguage.GetItemNameById(item.type), player))
+						if (DataModel.IsBanned(EnglishLanguage.GetItemNameById(item.type), player))
 						{
 							Taint(player);
 							SendCorrectiveMessage(player, item.Name);
@@ -157,7 +157,7 @@ namespace TShockAPI
 			TSPlayer player = args.Player;
 			string itemName = player.TPlayer.inventory[args.SelectedItem].Name;
 
-			if (DataModel.ItemIsBanned(EnglishLanguage.GetItemNameById(player.TPlayer.inventory[args.SelectedItem].netID), args.Player))
+			if (DataModel.IsBanned(EnglishLanguage.GetItemNameById(player.TPlayer.inventory[args.SelectedItem].netID), args.Player))
 			{
 				player.TPlayer.controlUseItem = false;
 				player.Disable(GetString($"holding banned item: {itemName}"), disableFlags);
@@ -181,7 +181,7 @@ namespace TShockAPI
 			item.netDefaults(args.Type);
 
 
-			if (DataModel.ItemIsBanned(EnglishLanguage.GetItemNameById(item.type), args.Player))
+			if (DataModel.IsBanned(EnglishLanguage.GetItemNameById(item.type), args.Player))
 			{
 				SendCorrectiveMessage(args.Player, item.Name);
 				args.Handled = true;
@@ -196,7 +196,7 @@ namespace TShockAPI
 		{
 			if (args.Action == EditAction.PlaceTile || args.Action == EditAction.PlaceWall)
 			{
-				if (args.Player.TPlayer.autoActuator && DataModel.ItemIsBanned("Actuator", args.Player))
+				if (args.Player.TPlayer.autoActuator && DataModel.IsBanned("Actuator", args.Player))
 				{
 					args.Player.SendTileSquareCentered(args.X, args.Y, 1);
 					args.Player.SendErrorMessage(GetString("You do not have permission to place actuators."));
@@ -204,7 +204,7 @@ namespace TShockAPI
 					return;
 				}
 
-				if (DataModel.ItemIsBanned(EnglishLanguage.GetItemNameById(args.Player.SelectedItem.netID), args.Player))
+				if (DataModel.IsBanned(EnglishLanguage.GetItemNameById(args.Player.SelectedItem.netID), args.Player))
 				{
 					args.Player.SendTileSquareCentered(args.X, args.Y, 4);
 					args.Handled = true;

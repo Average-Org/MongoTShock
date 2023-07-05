@@ -1458,44 +1458,48 @@ namespace TShockAPI
 
 			void DisplayBanDetails(Ban ban)
 			{
-				args.Player.SendMessage(GetString($"{"Ban Details".Color(Utils.BoldHighlight)} - Ticket Number: {ban.TicketNumber.Color(Utils.GreenHighlight)}"), Color.White);
-				args.Player.SendMessage(GetString($"{"Identifier:".Color(Utils.BoldHighlight)} {ban.Identifier}"), Color.White);
-				args.Player.SendMessage(GetString($"{"Reason:".Color(Utils.BoldHighlight)} {ban.Reason}"), Color.White);
-				args.Player.SendMessage(GetString($"{"Banned by:".Color(Utils.BoldHighlight)} {ban.BanningUser.Color(Utils.GreenHighlight)} on {ban.BanDateTime.ToString("yyyy/MM/dd").Color(Utils.RedHighlight)} ({ban.GetPrettyTimeSinceBanString().Color(Utils.YellowHighlight)} ago)"), Color.White);
-				if (ban.ExpirationDateTime < DateTime.UtcNow)
+				args.Player.SendMessage(GetString($"{"Ban Details".Color(Utils.BoldHighlight)} - ID: {ban.ID.Color(Utils.GreenHighlight)}"), Color.White);
+				if (!string.IsNullOrWhiteSpace(ban.AccountName))
 				{
-					args.Player.SendMessage(GetString($"{"Ban expired:".Color(Utils.BoldHighlight)} {ban.ExpirationDateTime.ToString("yyyy/MM/dd").Color(Utils.RedHighlight)} ({ban.GetPrettyExpirationString().Color(Utils.YellowHighlight)} ago)"), Color.White);
+					args.Player.SendMessage(GetString($"{"Account:".Color(Utils.BoldHighlight)} {ban.AccountName}"), Color.White);
+				}
+				if (!string.IsNullOrWhiteSpace(ban.IP))
+				{
+					args.Player.SendMessage(GetString($"{"IP:".Color(Utils.BoldHighlight)} {ban.IP}"), Color.White);
+				}
+				if (!string.IsNullOrWhiteSpace(ban.UUID))
+				{
+					args.Player.SendMessage(GetString($"{"UUID:".Color(Utils.BoldHighlight)} {ban.UUID}"), Color.White);
+
+				}
+
+				args.Player.SendMessage(GetString($"{"Reason:".Color(Utils.BoldHighlight)} {ban.Reason}"), Color.White);
+				args.Player.SendMessage(GetString($"{"Banned by:".Color(Utils.BoldHighlight)} {ban.BannedBy.Color(Utils.GreenHighlight)} on {ban.TimeBanned.ToString("yyyy/MM/dd").Color(Utils.RedHighlight)} ({ban.GetPrettyTimeSinceBanString().Color(Utils.YellowHighlight)} ago)"), Color.White);
+				if (ban.Expires is not null)
+				{
+					args.Player.SendMessage(GetString($"{"Ban expires:".Color(Utils.BoldHighlight)}  ({ban.GetPrettyExpirationString().Color(Utils.YellowHighlight)} ago)"), Color.White);
 				}
 				else
 				{
 					string remaining;
-					if (ban.ExpirationDateTime == DateTime.MaxValue)
-					{
-						remaining = GetString("Never.").Color(Utils.YellowHighlight);
-					}
-					else
-					{
-						remaining = GetString($"{ban.GetPrettyExpirationString().Color(Utils.YellowHighlight)} remaining.");
-					}
-
-					args.Player.SendMessage(GetString($"{"Ban expires:".Color(Utils.BoldHighlight)} {ban.ExpirationDateTime.ToString("yyyy/MM/dd").Color(Utils.RedHighlight)} ({remaining})"), Color.White);
+					remaining = GetString("never.").Color(Utils.YellowHighlight);
+					args.Player.SendMessage(GetString($"{"Ban expires:".Color(Utils.BoldHighlight)} {remaining}"), Color.White);
 				}
 			}
 
-			AddBanResult DoBan(string ident, string reason, DateTime expiration)
+			void DoBan(string accName, string reason, DateTime expiration)
 			{
-				AddBanResult banResult = TShock.Bans.InsertBan(ident, reason, args.Player.Account.Name, DateTime.UtcNow, expiration);
-				if (banResult.Ban != null)
+				try
 				{
-					args.Player.SendSuccessMessage(GetString($"Ban added. Ticket Number {banResult.Ban.TicketNumber.Color(Utils.GreenHighlight)} was created for identifier {ident.Color(Utils.WhiteHighlight)}."));
+					TShock.Bans.InsertBan(accName, reason, args.Player.Account.Name, DateTime.UtcNow, expiration);
+					args.Player.SendSuccessMessage(GetString($"Ban added."));
 				}
-				else
+				catch
 				{
-					args.Player.SendWarningMessage(GetString($"Failed to add ban for identifier: {ident.Color(Utils.WhiteHighlight)}."));
-					args.Player.SendWarningMessage(GetString($"Reason: {banResult.Message}."));
+
+						args.Player.SendWarningMessage(GetString($"Failed to add ban: {accName.Color(Utils.WhiteHighlight)}."));
 				}
 
-				return banResult;
 			}
 
 			void AddBan()

@@ -16,13 +16,13 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using MongoDB.Entities;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
-using MySql.Data.MySqlClient;
 
 namespace TShockAPI.DB
 {
@@ -31,173 +31,20 @@ namespace TShockAPI.DB
 	/// </summary>
 	public class GroupManager : IEnumerable<Group>
 	{
-		private IDbConnection database;
-		public readonly List<Group> groups = new List<Group>();
-
 		/// <summary>
 		/// Initializes a new instance of the <see cref="GroupManager"/> class with the specified database connection.
 		/// </summary>
 		/// <param name="db">The connection.</param>
-		public GroupManager(IDbConnection db)
+		public GroupManager()
 		{
-			database = db;
 
-			var table = new SqlTable("GroupList",
-				new SqlColumn("GroupName", MySqlDbType.VarChar, 32) { Primary = true },
-				new SqlColumn("Parent", MySqlDbType.VarChar, 32),
-				new SqlColumn("Commands", MySqlDbType.Text),
-				new SqlColumn("ChatColor", MySqlDbType.Text),
-				new SqlColumn("Prefix", MySqlDbType.Text),
-				new SqlColumn("Suffix", MySqlDbType.Text)
-			);
-			var creator = new SqlTableCreator(db,
-				db.GetSqlType() == SqlType.Sqlite
-					? (IQueryBuilder)new SqliteQueryCreator()
-					: new MysqlQueryCreator());
-			if (creator.EnsureTableStructure(table))
-			{
-				// Add default groups if they don't exist
-				AddDefaultGroup("guest", "",
-					string.Join(",",
-						Permissions.canbuild,
-						Permissions.canregister,
-						Permissions.canlogin,
-						Permissions.canpartychat,
-						Permissions.cantalkinthird,
-						Permissions.canchat,
-						Permissions.synclocalarea,
-						Permissions.sendemoji));
-
-				AddDefaultGroup("default", "guest",
-					string.Join(",",
-						Permissions.warp,
-						Permissions.canchangepassword,
-						Permissions.canlogout,
-						Permissions.summonboss,
-						Permissions.whisper,
-						Permissions.wormhole,
-						Permissions.canpaint,
-						Permissions.pylon,
-						Permissions.tppotion,
-						Permissions.magicconch,
-						Permissions.demonconch));
-
-				AddDefaultGroup("vip", "default",
-					string.Join(",",
-						Permissions.reservedslot,
-						Permissions.renamenpc,
-						Permissions.startinvasion,
-						Permissions.summonboss,
-						Permissions.whisper,
-						Permissions.wormhole));
-
-				AddDefaultGroup("newadmin", "vip",
-					string.Join(",",
-						Permissions.kick,
-						Permissions.editspawn,
-						Permissions.reservedslot,
-						Permissions.annoy,
-						Permissions.checkaccountinfo,
-						Permissions.getpos,
-						Permissions.mute,
-						Permissions.rod,
-						Permissions.savessc,
-						Permissions.seeids,
-						"tshock.world.time.*"));
-
-				AddDefaultGroup("admin", "newadmin",
-					string.Join(",",
-						Permissions.ban,
-						Permissions.whitelist,
-						Permissions.spawnboss,
-						Permissions.spawnmob,
-						Permissions.managewarp,
-						Permissions.time,
-						Permissions.tp,
-						Permissions.slap,
-						Permissions.kill,
-						Permissions.logs,
-						Permissions.immunetokick,
-						Permissions.tpothers,
-						Permissions.advaccountinfo,
-						Permissions.broadcast,
-						Permissions.home,
-						Permissions.tpallothers,
-						Permissions.tpallow,
-						Permissions.tpnpc,
-						Permissions.tppos,
-						Permissions.tpsilent,
-						Permissions.userinfo,
-						Permissions.spawn));
-
-				AddDefaultGroup("trustedadmin", "admin",
-					string.Join(",",
-						Permissions.maintenance,
-						"tshock.cfg.*",
-						"tshock.world.*",
-						Permissions.butcher,
-						Permissions.item,
-						Permissions.give,
-						Permissions.heal,
-						Permissions.immunetoban,
-						Permissions.usebanneditem,
-						Permissions.allowclientsideworldedit,
-						Permissions.buff,
-						Permissions.buffplayer,
-						Permissions.clear,
-						Permissions.clearangler,
-						Permissions.godmode,
-						Permissions.godmodeother,
-						Permissions.ignoredamagecap,
-						Permissions.ignorehp,
-						Permissions.ignorekilltiledetection,
-						Permissions.ignoreliquidsetdetection,
-						Permissions.ignoremp,
-						Permissions.ignorepaintdetection,
-						Permissions.ignoreplacetiledetection,
-						Permissions.ignoreprojectiledetection,
-						Permissions.ignorestackhackdetection,
-						Permissions.invade,
-						Permissions.startdd2,
-						Permissions.uploaddata,
-						Permissions.uploadothersdata,
-						Permissions.spawnpets,
-						Permissions.journey_timefreeze,
-						Permissions.journey_timeset,
-						Permissions.journey_timespeed,
-						Permissions.journey_godmode,
-						Permissions.journey_windstrength,
-						Permissions.journey_windfreeze,
-						Permissions.journey_rainstrength,
-						Permissions.journey_rainfreeze,
-						Permissions.journey_placementrange,
-						Permissions.journey_setdifficulty,
-						Permissions.journey_biomespreadfreeze,
-						Permissions.journey_setspawnrate,
-						Permissions.journey_contributeresearch));
-
-				AddDefaultGroup("owner", "trustedadmin",
-					string.Join(",",
-						Permissions.su,
-						Permissions.allowdroppingbanneditems,
-						Permissions.antibuild,
-						Permissions.canusebannedprojectiles,
-						Permissions.canusebannedtiles,
-						Permissions.managegroup,
-						Permissions.manageitem,
-						Permissions.manageprojectile,
-						Permissions.manageregion,
-						Permissions.managetile,
-						Permissions.maxspawns,
-						Permissions.serverinfo,
-						Permissions.settempgroup,
-						Permissions.spawnrate,
-						Permissions.tpoverride,
-						Permissions.createdumps));
-			}
-
-			// Load Permissions from the DB
-			LoadPermisions();
+			// Add default groups if they don't exist
+			AddDefaultGroup("guest", "", Data.DefaultPermissions.Guest);
+			AddDefaultGroup("default", "guest", Data.DefaultPermissions.Default);
+			AddDefaultGroup("vip", "default", Data.DefaultPermissions.VIP);
+			AddDefaultGroup("mod", "vip", Data.DefaultPermissions.Mod);
+			AddDefaultGroup("admin", "mod", Data.DefaultPermissions.Admin);
+			AddDefaultGroup("owner", "admin", Data.DefaultPermissions.Owner);
 
 			Group.DefaultGroup = GetGroupByName(TShock.Config.Settings.DefaultGuestGroupName);
 
@@ -241,7 +88,7 @@ namespace TShockAPI.DB
 			return true;
 		}
 
-		private void AddDefaultGroup(string name, string parent, string permissions)
+		private void AddDefaultGroup(string name, string parent, string[] permissions)
 		{
 			if (!GroupExists(name))
 				AddGroup(name, parent, permissions, Group.defaultChatColor);
@@ -256,34 +103,24 @@ namespace TShockAPI.DB
 		{
 			if (group == "superadmin")
 				return true;
-
-			return groups.Any(g => g.Name.Equals(group));
+			
+			return MongoDB.Entities.DB.Find<Group>().ManyAsync(a => a.Name == group).Result.Any();
 		}
 
-		IEnumerator IEnumerable.GetEnumerator()
-		{
-			return GetEnumerator();
-		}
+		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
 		/// <summary>
 		/// Gets the enumerator.
 		/// </summary>
 		/// <returns>The enumerator.</returns>
-		public IEnumerator<Group> GetEnumerator()
-		{
-			return groups.GetEnumerator();
-		}
+		public IEnumerator<Group> GetEnumerator() => MongoDB.Entities.DB.Find<Group>().ManyAsync(x => true).Result.GetEnumerator();
 
 		/// <summary>
 		/// Gets the group matching the specified name.
 		/// </summary>
 		/// <param name="name">The name.</param>
 		/// <returns>The group.</returns>
-		public Group GetGroupByName(string name)
-		{
-			var ret = groups.Where(g => g.Name == name);
-			return 1 == ret.Count() ? ret.ElementAt(0) : null;
-		}
+		public Group GetGroupByName(string name) => MongoDB.Entities.DB.Find<Group>().ManyAsync(a => a.Name == name).Result.First();
 
 		/// <summary>
 		/// Adds group with name and permissions if it does not exist.
@@ -292,59 +129,26 @@ namespace TShockAPI.DB
 		/// <param name="parentname">parent of group</param>
 		/// <param name="permissions">permissions</param>
 		/// <param name="chatcolor">chatcolor</param>
-		public void AddGroup(String name, string parentname, String permissions, String chatcolor)
+		public void AddGroup(String name, string parentname, string[] permissions, String chatcolor)
 		{
 			if (GroupExists(name))
-			{
 				throw new GroupExistsException(name);
-			}
 
-			var group = new Group(name, null, chatcolor);
-			group.Permissions = permissions;
-			if (!string.IsNullOrWhiteSpace(parentname))
-			{
-				var parent = groups.FirstOrDefault(gp => gp.Name == parentname);
-				if (parent == null || name == parentname)
-				{
-					var error = GetString($"Invalid parent group {parentname} for group {group.Name}");
-					TShock.Log.ConsoleError(error);
-					throw new GroupManagerException(error);
-				}
-				group.Parent = parent;
-			}
+			Group group = new Group(name, null, chatcolor);
+			group.Permissions = permissions.ToList();
 
-			string query = (TShock.Config.Settings.StorageType.ToLower() == "sqlite")
-				? "INSERT OR IGNORE INTO GroupList (GroupName, Parent, Commands, ChatColor) VALUES (@0, @1, @2, @3);"
-				: "INSERT IGNORE INTO GroupList SET GroupName=@0, Parent=@1, Commands=@2, ChatColor=@3";
-			if (database.Query(query, name, parentname, permissions, chatcolor) == 1)
-			{
-				groups.Add(group);
-			}
-			else
-				throw new GroupManagerException(GetString($"Failed to add group {name}."));
+			group.Parent = ValidParent(parentname, group);
+			group.SaveAsync();
 		}
 
-		/// <summary>
-		/// Updates a group including permissions
-		/// </summary>
-		/// <param name="name">name of the group to update</param>
-		/// <param name="parentname">parent of group</param>
-		/// <param name="permissions">permissions</param>
-		/// <param name="chatcolor">chatcolor</param>
-		/// <param name="suffix">suffix</param>
-		/// <param name="prefix">prefix</param> //why is suffix before prefix?!
-		public void UpdateGroup(string name, string parentname, string permissions, string chatcolor, string suffix, string prefix)
+		Group ValidParent(string parentname, Group group)
 		{
-			Group group = GetGroupByName(name);
-			if (group == null)
-				throw new GroupNotExistException(name);
-
-			Group parent = null;
+			Group parent = new Group();
 			if (!string.IsNullOrWhiteSpace(parentname))
 			{
 				parent = GetGroupByName(parentname);
 				if (parent == null || parent == group)
-					throw new GroupManagerException(GetString($"Invalid parent group {parentname} for group {name}."));
+					throw new GroupManagerException(GetString($"Invalid parent group {parentname} for group {group.Name}."));
 
 				// Check if the new parent would cause loops.
 				List<Group> groupChain = new List<Group> { group, parent };
@@ -359,20 +163,32 @@ namespace TShockAPI.DB
 					checkingGroup = checkingGroup.Parent;
 				}
 			}
+			return parent;
+		}
+		
+		/// <summary>
+		/// Updates a group including permissions
+		/// </summary>
+		/// <param name="name">name of the group to update</param>
+		/// <param name="parentname">parent of group</param>
+		/// <param name="permissions">permissions</param>
+		/// <param name="chatcolor">chatcolor</param>
+		/// <param name="suffix">suffix</param>
+		/// <param name="prefix">prefix</param> //why is suffix before prefix?!
+		public void UpdateGroup(string name, string parentname, string[] permissions, string chatcolor, string suffix, string prefix)
+		{
+			Group group = GetGroupByName(name);
+			if (group is null)
+				throw new GroupNotExistException(name);
 
-			// Ensure any group validation is also persisted to the DB.
-			var newGroup = new Group(name, parent, chatcolor, permissions);
-			newGroup.Prefix = prefix;
-			newGroup.Suffix = suffix;
-			string query = "UPDATE GroupList SET Parent=@0, Commands=@1, ChatColor=@2, Suffix=@3, Prefix=@4 WHERE GroupName=@5";
-			if (database.Query(query, parentname, newGroup.Permissions, newGroup.ChatColor, suffix, prefix, name) != 1)
-				throw new GroupManagerException(GetString($"Failed to update group \"{name}\"."));
+			Group parent = ValidParent(parentname, group);
 
-			group.ChatColor = chatcolor;
-			group.Permissions = permissions;
-			group.Parent = parent;
 			group.Prefix = prefix;
 			group.Suffix = suffix;
+			group.ChatColor = chatcolor;
+			group.Permissions = permissions.ToList();
+			group.Parent = parent;
+			group.SaveAsync();
 		}
 
 		/// <summary>
@@ -381,103 +197,27 @@ namespace TShockAPI.DB
 		/// <param name="name">The group's name.</param>
 		/// <param name="newName">The new name.</param>
 		/// <returns>The result from the operation to be sent back to the user.</returns>
-		public String RenameGroup(string name, string newName)
+		public string RenameGroup(string name, string newName)
 		{
 			if (!GroupExists(name))
-			{
 				throw new GroupNotExistException(name);
-			}
+			
 
 			if (GroupExists(newName))
-			{
 				throw new GroupExistsException(newName);
-			}
 
-			using (var db = database.CloneEx())
-			{
-				db.Open();
-				using (var transaction = db.BeginTransaction())
-				{
-					try
-					{
-						using (var command = db.CreateCommand())
-						{
-							command.CommandText = "UPDATE GroupList SET GroupName = @0 WHERE GroupName = @1";
-							command.AddParameter("@0", newName);
-							command.AddParameter("@1", name);
-							command.ExecuteNonQuery();
-						}
+			Group group = GetGroupByName(name);
+			if (group is null)
+				throw new GroupNotExistException(name);
 
-						var oldGroup = GetGroupByName(name);
-						var newGroup = new Group(newName, oldGroup.Parent, oldGroup.ChatColor, oldGroup.Permissions)
-						{
-							Prefix = oldGroup.Prefix,
-							Suffix = oldGroup.Suffix
-						};
-						groups.Remove(oldGroup);
-						groups.Add(newGroup);
+			if (TShock.Config.Settings.DefaultGuestGroupName == name)
+				TShock.Config.Settings.DefaultGuestGroupName = newName;
+			if(TShock.Config.Settings.DefaultRegistrationGroupName == name)
+				TShock.Config.Settings.DefaultRegistrationGroupName = newName;
 
-						// We need to check if the old group has been referenced as a parent and update those references accordingly
-						using (var command = db.CreateCommand())
-						{
-							command.CommandText = "UPDATE GroupList SET Parent = @0 WHERE Parent = @1";
-							command.AddParameter("@0", newName);
-							command.AddParameter("@1", name);
-							command.ExecuteNonQuery();
-						}
-						foreach (var group in groups.Where(g => g.Parent != null && g.Parent == oldGroup))
-						{
-							group.Parent = newGroup;
-						}
-
-						// Read the config file to prevent the possible loss of any unsaved changes
-						TShock.Config.Read(FileTools.ConfigPath, out bool writeConfig);
-						if (TShock.Config.Settings.DefaultGuestGroupName == oldGroup.Name)
-						{
-							TShock.Config.Settings.DefaultGuestGroupName = newGroup.Name;
-							Group.DefaultGroup = newGroup;
-						}
-						if (TShock.Config.Settings.DefaultRegistrationGroupName == oldGroup.Name)
-						{
-							TShock.Config.Settings.DefaultRegistrationGroupName = newGroup.Name;
-						}
-						if (writeConfig)
-						{
-							TShock.Config.Write(FileTools.ConfigPath);
-						}
-
-						// We also need to check if any users belong to the old group and automatically apply changes
-						using (var command = db.CreateCommand())
-						{
-							command.CommandText = "UPDATE Users SET Usergroup = @0 WHERE Usergroup = @1";
-							command.AddParameter("@0", newName);
-							command.AddParameter("@1", name);
-							command.ExecuteNonQuery();
-						}
-						foreach (var player in TShock.Players.Where(p => p?.Group == oldGroup))
-						{
-							player.Group = newGroup;
-						}
-
-						transaction.Commit();
-						return GetString($"Group {name} has been renamed to {newName}.");
-					}
-					catch (Exception ex)
-					{
-						TShock.Log.Error(GetString($"An exception has occurred during database transaction: {ex.Message}"));
-						try
-						{
-							transaction.Rollback();
-						}
-						catch (Exception rollbackEx)
-						{
-							TShock.Log.Error(GetString($"An exception has occurred during database rollback: {rollbackEx.Message}"));
-						}
-					}
-				}
-			}
-
-			throw new GroupManagerException(GetString($"Failed to rename group {name}."));
+			group.Name = newName;
+			group.SaveAsync();
+			return "Group renamed.";
 		}
 
 		/// <summary>
@@ -486,7 +226,7 @@ namespace TShockAPI.DB
 		/// <param name="name">The group's name.</param>
 		/// <param name="exceptions">Whether exceptions will be thrown in case something goes wrong.</param>
 		/// <returns>The result from the operation to be sent back to the user.</returns>
-		public String DeleteGroup(String name, bool exceptions = false)
+		public string DeleteGroup(String name, bool exceptions = false)
 		{
 			if (!GroupExists(name))
 			{
@@ -502,11 +242,8 @@ namespace TShockAPI.DB
 				return GetString("You can't remove the default guest group.");
 			}
 
-			if (database.Query("DELETE FROM GroupList WHERE GroupName=@0", name) == 1)
-			{
-				groups.Remove(TShock.Groups.GetGroupByName(name));
-				return GetString($"Group {name} has been deleted successfully.");
-			}
+			Group deleted = GetGroupByName(name);
+			deleted.DeleteAsync();
 
 			if (exceptions)
 				throw new GroupManagerException(GetString($"Failed to delete group {name}."));
@@ -528,11 +265,7 @@ namespace TShockAPI.DB
 			var oldperms = group.Permissions; // Store old permissions in case of error
 			permissions.ForEach(p => group.AddPermission(p));
 
-			if (database.Query("UPDATE GroupList SET Commands=@0 WHERE GroupName=@1", group.Permissions, name) == 1)
-				return "Group " + name + " has been modified successfully.";
-
-			// Restore old permissions so DB and internal object are in a consistent state
-			group.Permissions = oldperms;
+			group.SaveAsync();
 			return "";
 		}
 
@@ -551,120 +284,10 @@ namespace TShockAPI.DB
 			var oldperms = group.Permissions; // Store old permissions in case of error
 			permissions.ForEach(p => group.RemovePermission(p));
 
-			if (database.Query("UPDATE GroupList SET Commands=@0 WHERE GroupName=@1", group.Permissions, name) == 1)
-				return "Group " + name + " has been modified successfully.";
-
-			// Restore old permissions so DB and internal object are in a consistent state
-			group.Permissions = oldperms;
+			group.SaveAsync();
 			return "";
 		}
-
-		/// <summary>
-		/// Enumerates the group list and loads permissions for each group appropriately.
-		/// </summary>
-		public void LoadPermisions()
-		{
-			try
-			{
-				List<Group> newGroups = new List<Group>(groups.Count);
-				Dictionary<string, string> newGroupParents = new Dictionary<string, string>(groups.Count);
-				using (var reader = database.QueryReader("SELECT * FROM GroupList"))
-				{
-					while (reader.Read())
-					{
-						string groupName = reader.Get<string>("GroupName");
-						if (groupName == "superadmin")
-						{
-							TShock.Log.ConsoleWarn(GetString("Group \"superadmin\" is defined in the database even though it's a reserved group name."));
-							continue;
-						}
-
-						newGroups.Add(new Group(groupName, null, reader.Get<string>("ChatColor"), reader.Get<string>("Commands"))
-						{
-							Prefix = reader.Get<string>("Prefix"),
-							Suffix = reader.Get<string>("Suffix"),
-						});
-
-						try
-						{
-							newGroupParents.Add(groupName, reader.Get<string>("Parent"));
-						}
-						catch (ArgumentException)
-						{
-							// Just in case somebody messed with the unique primary key.
-							TShock.Log.ConsoleError(GetString($"The group {groupName} appeared more than once. Keeping current group settings."));
-							return;
-						}
-					}
-				}
-
-				try
-				{
-					// Get rid of deleted groups.
-					for (int i = 0; i < groups.Count; i++)
-						if (newGroups.All(g => g.Name != groups[i].Name))
-							groups.RemoveAt(i--);
-
-					// Apply changed group settings while keeping the current instances and add new groups.
-					foreach (Group newGroup in newGroups)
-					{
-						Group currentGroup = groups.FirstOrDefault(g => g.Name == newGroup.Name);
-						if (currentGroup != null)
-							newGroup.AssignTo(currentGroup);
-						else
-							groups.Add(newGroup);
-					}
-
-					// Resolve parent groups.
-					Debug.Assert(newGroups.Count == newGroupParents.Count);
-					for (int i = 0; i < groups.Count; i++)
-					{
-						Group group = groups[i];
-						string parentGroupName;
-						if (!newGroupParents.TryGetValue(group.Name, out parentGroupName) || string.IsNullOrEmpty(parentGroupName))
-							continue;
-
-						group.Parent = groups.FirstOrDefault(g => g.Name == parentGroupName);
-						if (group.Parent == null)
-						{
-							TShock.Log.ConsoleError(
-								GetString($"Group {group.Name} is referencing a non existent parent group {parentGroupName}, parent reference was removed."));
-						}
-						else
-						{
-							if (group.Parent == group)
-								TShock.Log.ConsoleWarn(
-									GetString($"Group {group.Name} is referencing itself as parent group; parent reference was removed."));
-
-							List<Group> groupChain = new List<Group> { group };
-							Group checkingGroup = group;
-							while (checkingGroup.Parent != null)
-							{
-								if (groupChain.Contains(checkingGroup.Parent))
-								{
-									TShock.Log.ConsoleError(
-										GetString($"Group \"{checkingGroup.Name}\" is referencing parent group {checkingGroup.Parent.Name} which is already part of the parent chain. Parent reference removed."));
-
-									checkingGroup.Parent = null;
-									break;
-								}
-								groupChain.Add(checkingGroup);
-								checkingGroup = checkingGroup.Parent;
-							}
-						}
-					}
-				}
-				finally
-				{
-					if (!groups.Any(g => g is SuperAdminGroup))
-						groups.Add(new SuperAdminGroup());
-				}
-			}
-			catch (Exception ex)
-			{
-				TShock.Log.ConsoleError(GetString($"Error on reloading groups: {ex}"));
-			}
-		}
+			
 	}
 
 	/// <summary>

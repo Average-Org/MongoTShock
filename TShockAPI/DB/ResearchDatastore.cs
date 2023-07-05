@@ -1,12 +1,8 @@
-﻿using MySql.Data.MySqlClient;
+﻿using MongoDB.Entities;
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Terraria;
-using Terraria.ID;
+using TShockAPI.Models.Entities;
 
 namespace TShockAPI.DB
 {
@@ -17,58 +13,19 @@ namespace TShockAPI.DB
 	/// </summary>
 	public class ResearchDatastore
 	{
-		private IDbConnection database;
-
-		/// <summary>
-		/// In-memory cache of what items have been sacrificed.
-		/// The first call to GetSacrificedItems will load this with data from the database.
-		/// </summary>
-		private Dictionary<int, int> _itemsSacrificed;
-
 		/// <summary>
 		/// Initializes a new instance of the <see cref="TShockAPI.DB.ResearchDatastore"/> class.
 		/// </summary>
 		/// <param name="db">A valid connection to the TShock database</param>
-		public ResearchDatastore(IDbConnection db)
-		{
-			database = db;
-
-			var table = new SqlTable("Research",
-									new SqlColumn("WorldId", MySqlDbType.Int32),
-									new SqlColumn("PlayerId", MySqlDbType.Int32),
-									new SqlColumn("ItemId", MySqlDbType.Int32),
-									new SqlColumn("AmountSacrificed", MySqlDbType.Int32),
-									new SqlColumn("TimeSacrificed", MySqlDbType.DateTime)
-				);
-			var creator = new SqlTableCreator(db,
-				db.GetSqlType() == SqlType.Sqlite
-					? (IQueryBuilder)new SqliteQueryCreator()
-					: new MysqlQueryCreator());
-			try
-			{
-				creator.EnsureTableStructure(table);
-			}
-			catch (DllNotFoundException)
-			{
-				TShock.Log.ConsoleWarn(GetString("Possible problem with your database - is Sqlite3.dll present?"));
-				throw new Exception(GetString("Could not find a database library (probably Sqlite3.dll)"));
-			}
-		}
+		public ResearchDatastore() { }
 
 		/// <summary>
 		/// This call will return the memory-cached list of items sacrificed.
 		/// If the cache is not initialized, it will be initialized from the database.
 		/// </summary>
 		/// <returns></returns>
-		public Dictionary<int, int> GetSacrificedItems()
-		{
-			if (_itemsSacrificed == null)
-			{
-				_itemsSacrificed = ReadFromDatabase();
-			}
-
-			return _itemsSacrificed;
-		}
+		public Dictionary<int,int> GetSacrificedItems() => ReadFromDatabase();
+		
 
 		/// <summary>
 		/// This function will return a Dictionary&lt;ItemId, AmountSacrificed&gt; representing
@@ -79,26 +36,19 @@ namespace TShockAPI.DB
 		{
 			Dictionary<int, int> sacrificedItems = new Dictionary<int, int>();
 
-			var sql = @"select itemId, sum(AmountSacrificed) totalSacrificed
-  from Research
-	where WorldId = @0
-      group by itemId";
-
-			try {
-				using (var reader = database.QueryReader(sql, Main.worldID))
-				{
-					while (reader.Read())
-					{
-						var itemId = reader.Get<Int32>("itemId");
-						var amount = reader.Get<Int32>("totalSacrificed");
-						sacrificedItems[itemId] = amount;
-					}
-				}
-			}
-			catch (Exception ex)
+			MongoDB.Entities.DB.Find<Research>().ManyAsync(x => true).Result.ForEach(x =>
 			{
-				TShock.Log.Error(ex.ToString());
-			}
+				if (sacrificedItems.ContainsKey(x.ItemId))
+				{
+					sacrificedItems[x.ItemId] += x.AmountSacrificed;
+				}
+				else
+				{
+					sacrificedItems.Add(x.ItemId, x.AmountSacrificed);
+				}
+			});
+
+
 			return sacrificedItems;
 		}
 
@@ -112,25 +62,19 @@ namespace TShockAPI.DB
 		public int SacrificeItem(int itemId, int amount, TSPlayer player)
 		{
 			var itemsSacrificed = GetSacrificedItems();
-			if (!(itemsSacrificed.ContainsKey(itemId)))
-				itemsSacrificed[itemId] = 0;
-
-			var sql = @"insert into Research (WorldId, PlayerId, ItemId, AmountSacrificed, TimeSacrificed) values (@0, @1, @2, @3, @4)";
-
-			var result = 0;
-			try
+			if (!itemsSacrificed.ContainsKey(itemId))
 			{
-				result = database.Query(sql, Main.worldID, player.Account.ID, itemId, amount, DateTime.Now);
+				Research sacrifice = new()
+				{
+					WorldId = Main.worldID,
+					PlayerId = player.Account.ID,
+					ItemId = itemId,
+					AmountSacrificed = amount,
+					TimeSacrificed = DateTime.Now
+				};
+				sacrifice.SaveAsync();
 			}
-			catch (Exception ex)
-			{
-				TShock.Log.Error(ex.ToString());
-			}
-
-			if (result == 1)
-			{
-				itemsSacrificed[itemId] += amount;
-			}
+			
 
 			return itemsSacrificed[itemId];
 		}

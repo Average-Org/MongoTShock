@@ -28,7 +28,6 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using MaxMind;
-using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
 using Rests;
 using Terraria;
@@ -314,42 +313,6 @@ namespace TShockAPI
 			// Further exceptions are written to TShock's log from now on.
 			try
 			{
-				if (Config.Settings.StorageType.ToLower() == "sqlite")
-				{
-					string sql = Path.Combine(SavePath, Config.Settings.SqliteDBPath);
-					Directory.CreateDirectory(Path.GetDirectoryName(sql));
-					DB = new Microsoft.Data.Sqlite.SqliteConnection(string.Format("Data Source={0}", sql));
-				}
-				else if (Config.Settings.StorageType.ToLower() == "mysql")
-				{
-					try
-					{
-						var hostport = Config.Settings.MySqlHost.Split(':');
-						DB = new MySqlConnection();
-						DB.ConnectionString =
-							String.Format("Server={0}; Port={1}; Database={2}; Uid={3}; Pwd={4};",
-								hostport[0],
-								hostport.Length > 1 ? hostport[1] : "3306",
-								Config.Settings.MySqlDbName,
-								Config.Settings.MySqlUsername,
-								Config.Settings.MySqlPassword
-								);
-					}
-					catch (MySqlException ex)
-					{
-						ServerApi.LogWriter.PluginWriteLine(this, ex.ToString(), TraceLevel.Error);
-						throw new Exception("MySql not setup correctly");
-					}
-				}
-				else
-				{
-					throw new Exception("Invalid storage type");
-				}
-
-				if (Config.Settings.UseSqlLogs)
-					Log = new SqlLog(DB, logFilename, LogClear);
-				else
-					Log = new TextLog(logFilename, LogClear);
 
 				if (File.Exists(Path.Combine(SavePath, "tshock.pid")))
 				{
@@ -366,16 +329,16 @@ namespace TShockAPI
 				Backups = new BackupManager(Path.Combine(SavePath, "backups"));
 				Backups.KeepFor = Config.Settings.BackupKeepFor;
 				Backups.Interval = Config.Settings.BackupInterval;
-				Bans = new BanManager(DB);
-				Warps = new WarpManager(DB);
-				Regions = new RegionManager(DB);
-				UserAccounts = new UserAccountManager(DB);
-				Groups = new GroupManager(DB);
-				ProjectileBans = new ProjectileManagager(DB);
-				TileBans = new TileManager(DB);
-				RememberedPos = new RememberedPosManager(DB);
-				CharacterDB = new CharacterManager(DB);
-				ResearchDatastore = new ResearchDatastore(DB);
+				Bans = new BanManager();
+				Warps = new WarpManager();
+				Regions = new RegionManager();
+				UserAccounts = new UserAccountManager();
+				Groups = new GroupManager();
+				ProjectileBans = new ProjectileManagager();
+				TileBans = new TileManager();
+				RememberedPos = new RememberedPosManager();
+				CharacterDB = new CharacterManager();
+				ResearchDatastore = new ResearchDatastore();
 				RestApi = new SecureRest(Netplay.ServerIP, Config.Settings.RestApiPort);
 				RestManager = new RestManager(RestApi);
 				RestManager.RegisterRestfulCommands();
@@ -607,10 +570,7 @@ namespace TShockAPI
 
 		/// <summary>OnAccountCreate - Internal hook fired on account creation.</summary>
 		/// <param name="args">args - The AccountCreateEventArgs object.</param>
-		private void OnAccountCreate(Hooks.AccountCreateEventArgs args)
-		{
-			CharacterDB.SeedInitialData(UserAccounts.GetUserAccount(args.Account));
-		}
+		private void OnAccountCreate(Hooks.AccountCreateEventArgs args) => CharacterDB.SeedInitialData(UserAccounts.GetUserAccount(args.Account));
 
 		/// <summary>OnPlayerPreLogin - Internal hook fired when on player pre login.</summary>
 		/// <param name="args">args - The PlayerPreLoginEventArgs object.</param>
@@ -1059,9 +1019,6 @@ namespace TShockAPI
 				Console.WriteLine(GetString("This token will display until disabled by verification. ({0}setup)", Commands.Specifier));
 				Console.ResetColor();
 			}
-
-			Regions.Reload();
-			Warps.ReloadWarps();
 
 			Utils.ComputeMaxStyles();
 			Utils.FixChestStacks();

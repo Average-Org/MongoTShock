@@ -1174,7 +1174,7 @@ namespace TShockAPI
 			Group group = (Group)ret;
 			var parent = (null == args.Parameters["parent"]) ? group.ParentName : args.Parameters["parent"];
 			var chatcolor = (null == args.Parameters["chatcolor"]) ? string.Format("{0}.{1}.{2}", group.R, group.G, group.B) : args.Parameters["chatcolor"];
-			var permissions = (null == args.Parameters["permissions"]) ? group.Permissions : args.Parameters["permissions"];
+			var permissions = (null == args.Parameters["permissions"]) ? group.Permissions.ToString() : args.Parameters["permissions"];
 			try
 			{
 				TShock.Groups.UpdateGroup(group.Name, parent, permissions, chatcolor, group.Suffix, group.Prefix);
