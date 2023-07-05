@@ -529,36 +529,11 @@ namespace TShockAPI.Configuration
 		#region MySQL Settings
 
 		/// <summary>The type of database to use when storing data (either "sqlite" or "mysql").</summary>
-		[Description("The type of database to use when storing data (either \"sqlite\" or \"mysql\").")]
-		public string StorageType = "sqlite";
+		[Description("Your MongoDB connection string.")]
+		public string ConnectionString = string.Empty;
 
-		/// <summary>The path of sqlite db.</summary>
-		[Description("The path of sqlite db.")]
-		public string SqliteDBPath = "tshock.sqlite";
-
-		/// <summary>The MySQL hostname and port to direct connections to.</summary>
-		[Description("The MySQL hostname and port to direct connections to.")]
-		public string MySqlHost = "localhost:3306";
-
-		/// <summary>The database name to connect to when using MySQL as the database type.</summary>
-		[Description("The database name to connect to when using MySQL as the database type.")]
-		public string MySqlDbName = "";
-
-		/// <summary>The username used when connecting to a MySQL database.</summary>
-		[Description("The username used when connecting to a MySQL database.")]
-		public string MySqlUsername = "";
-
-		/// <summary>The password used when connecting to a MySQL database.</summary>
-		[Description("The password used when connecting to a MySQL database.")]
-		public string MySqlPassword = "";
-
-		/// <summary>Whether or not to save logs to the SQL database instead of a text file.</summary>
-		[Description("Whether or not to save logs to the SQL database instead of a text file.\nDefault = false.")]
-		public bool UseSqlLogs = false;
-
-		/// <summary>Number of times the SQL log must fail to insert logs before falling back to the text log.</summary>
-		[Description("Number of times the SQL log must fail to insert logs before falling back to the text log.")]
-		public int RevertToTextLogsOnSqlFailures = 10;
+		[Description("MongoDB name")]
+		public string DatabaseName = string.Empty;
 
 		#endregion
 

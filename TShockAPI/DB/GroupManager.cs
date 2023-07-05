@@ -137,7 +137,7 @@ namespace TShockAPI.DB
 				throw new GroupExistsException(name);
 
 			Group group = new Group(name, null, chatcolor);
-			group.Permissions = permissions.ToList();
+			group.Permissions = permissions;
 
 			group.Parent = ValidParent(parentname, group);
 			group.SaveAsync();
@@ -188,7 +188,7 @@ namespace TShockAPI.DB
 			group.Prefix = prefix;
 			group.Suffix = suffix;
 			group.ChatColor = chatcolor;
-			group.Permissions = permissions.ToList();
+			group.Permissions = permissions;
 			group.Parent = parent;
 			group.SaveAsync();
 		}

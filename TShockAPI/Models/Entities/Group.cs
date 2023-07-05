@@ -39,12 +39,12 @@ namespace TShockAPI
 		/// <summary>
 		/// List of permissions available to the group.
 		/// </summary>
-		public List<string> Permissions { get; set; } = new List<string>();
+		public string[] Permissions { get; set; } = new string[] { };
 
 		/// <summary>
 		/// List of permissions that the group is explicitly barred from.
 		/// </summary>
-		public List<string> NegatedPermissions { get; set; } = new List<string>();
+		public string[] NegatedPermissions { get; set; } = new string[] { };
 
 		/// <summary>
 		/// The group's name.
@@ -164,7 +164,7 @@ namespace TShockAPI
 			Name = groupname;
 			Parent = parentgroup;
 			ChatColor = chatcolor;
-			Permissions = permissions.ToList();
+			Permissions = (permissions is null) ? new string[] { } : permissions;
 		}
 
 		public Group() { }
@@ -230,8 +230,13 @@ namespace TShockAPI
 			// Avoid duplicates
 			if (!NegatedPermissions.Contains(permission))
 			{
-				NegatedPermissions.Add(permission);
-				Permissions.Remove(permission); // Ensure we don't have conflicting definitions for a permissions
+				var neg = NegatedPermissions.ToList();
+				neg.Add(permission);
+				NegatedPermissions = neg.ToArray();
+
+				var perm = Permissions.ToList();
+				perm.Remove(permission);
+				Permissions = perm.ToArray(); // Ensure we don't have conflicting definitions for a permissions
 				this.SaveAsync();
 			}
 		}
@@ -250,8 +255,13 @@ namespace TShockAPI
 			// Avoid duplicates
 			if (!Permissions.Contains(permission))
 			{
-				Permissions.Add(permission);
-				NegatedPermissions.Remove(permission); // Ensure we don't have conflicting definitions for a permissions
+				var perm = Permissions.ToList();
+				perm.Add(permission);
+				Permissions = perm.ToArray();
+
+				var neg = NegatedPermissions.ToList();
+				neg.Remove(permission);
+				NegatedPermissions = neg.ToArray(); // Ensure we don't have conflicting definitions for a permissions
 			}
 			this.SaveAsync();
 		}
@@ -263,8 +273,8 @@ namespace TShockAPI
 		/// <param name="permission">The new list of permissions to associate with the group.</param>
 		public void SetPermission(List<string> permission)
 		{
-			Permissions.Clear();
-			NegatedPermissions.Clear();
+			Permissions = new string[] { };
+			NegatedPermissions = new string[] { };
 			permission.ForEach(p => AddPermission(p));
 		}
 
@@ -277,11 +287,15 @@ namespace TShockAPI
 		{
 			if (permission.StartsWith("!"))
 			{
-				NegatedPermissions.Remove(permission.Substring(1));
+				var negative = NegatedPermissions.ToList();
+				negative.Remove(permission.Substring(1));
+				NegatedPermissions = negative.ToArray();
 				this.SaveAsync();
 				return;
 			}
-			NegatedPermissions.Remove(permission);
+			var neg = Permissions.ToList();
+			neg.Remove(permission);
+			Permissions = neg.ToArray();
 			this.SaveAsync();
 		}
 

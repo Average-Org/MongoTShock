@@ -17,7 +17,7 @@ namespace TShockAPI
 		public DateTime TimeBanned { get; set; }
 		public string BannedBy { get; set; }
 		public string Reason { get; set; }
-		public bool Active => (Expires is null || Expires > DateTime.UtcNow);
+		public bool Active { get; set; } = true;
 		public DateTime? Expires { get; set; }
 
 		/// <summary>
@@ -33,6 +33,20 @@ namespace TShockAPI
 			TimeSpan ts = ((DateTime)Expires - DateTime.UtcNow).Duration(); // Use duration to avoid pesky negatives for expired bans
 			return $"{ts.Days:00}:{ts.Hours:00}:{ts.Minutes:00}:{ts.Seconds:00}";
 		}
+
+		public bool IsExpired()
+		{
+			{
+				if (Expires is null)
+					return false;
+
+				bool e = DateTime.UtcNow > Expires;
+				if (e)
+					Active = false;
+				return e;
+			}
+		}
+
 
 		/// <summary>
 		/// Returns a string in the format dd:mm:hh:ss indicating the time elapsed since the ban was added.

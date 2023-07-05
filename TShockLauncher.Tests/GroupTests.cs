@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using System.Linq;
 using TShockAPI;
 using TShockAPI.DB;
 
@@ -13,19 +14,19 @@ public class GroupTests
 	[TestCase]
 	public void TestPermissions()
 	{
-		var groups = TShock.Groups = new GroupManager(TShock.DB);
+		var groups = TShock.Groups = new GroupManager();
 
 		if (!groups.GroupExists("test"))
-			groups.AddGroup("test", null, "test", Group.defaultChatColor);
+			groups.AddGroup("test", null, new string[] { "test" }, Group.defaultChatColor);
 
 		groups.AddPermissions("test", new() { "abc" });
 
-		var hasperm = groups.GetGroupByName("test").Permissions.Contains("abc");
+		var hasperm = groups.GetGroupByName("test").Permissions.ToList().Contains("abc");
 		Assert.IsTrue(hasperm);
 
 		groups.DeletePermissions("test", new() { "abc" });
 
-		hasperm = groups.GetGroupByName("test").Permissions.Contains("abc");
+		hasperm = groups.GetGroupByName("test").Permissions.ToList().Contains("abc");
 		Assert.IsFalse(hasperm);
 
 		groups.DeleteGroup("test");

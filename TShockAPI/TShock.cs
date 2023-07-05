@@ -16,6 +16,11 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using MaxMind;
+using Microsoft.Xna.Framework;
+using MonoMod.Cil;
+using Newtonsoft.Json;
+using Rests;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -27,28 +32,23 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
-using MaxMind;
-using Newtonsoft.Json;
-using Rests;
+using System.Runtime.InteropServices;
 using Terraria;
+using Terraria.Achievements;
+using Terraria.GameContent.Creative;
 using Terraria.ID;
+using Terraria.Initializers;
 using Terraria.Localization;
+using Terraria.UI.Chat;
+using Terraria.Utilities;
 using TerrariaApi.Server;
+using TShockAPI.CLI;
+using TShockAPI.Configuration;
 using TShockAPI.DB;
 using TShockAPI.Hooks;
-using Terraria.Utilities;
-using Microsoft.Xna.Framework;
-using TShockAPI.Sockets;
-using TShockAPI.CLI;
 using TShockAPI.Localization;
-using TShockAPI.Configuration;
-using Terraria.GameContent.Creative;
-using System.Runtime.InteropServices;
-using MonoMod.Cil;
-using Terraria.Achievements;
-using Terraria.Initializers;
-using Terraria.UI.Chat;
 using TShockAPI.Modules;
+using TShockAPI.Sockets;
 
 namespace TShockAPI
 {
@@ -62,7 +62,7 @@ namespace TShockAPI
 		/// <summary>VersionNum - The version number the TerrariaAPI will return back to the API. We just use the Assembly info.</summary>
 		public static readonly Version VersionNum = Assembly.GetExecutingAssembly().GetName().Version;
 		/// <summary>VersionCodename - The version codename is displayed when the server starts. Inspired by software codenames conventions.</summary>
-		public static readonly string VersionCodename = "Intensity";
+		public static readonly string VersionCodename = "Mongoose";
 
 		/// <summary>SavePath - This is the path TShock saves its data in. This path is relative to the TerrariaServer.exe (not in ServerPlugins).</summary>
 		public static string SavePath = "tshock";
@@ -80,6 +80,11 @@ namespace TShockAPI
 
 		/// <summary>Will be set to true once Utils.StopServer() is called.</summary>
 		public static bool ShuttingDown;
+
+		/// <summary>
+		/// Whether Mongo has been successfully configured.
+		/// </summary>
+		public bool MongoConfigured;
 
 		/// <summary>Players - Contains all TSPlayer objects for accessing TSPlayers currently on the server</summary>
 		public static TSPlayer[] Players = new TSPlayer[Main.maxPlayers];
@@ -134,7 +139,7 @@ namespace TShockAPI
 		/// <summary>
 		/// Used for implementing REST Tokens prior to the REST system starting up.
 		/// </summary>
-		public static Dictionary<string, SecureRest.TokenData> RESTStartupTokens = new Dictionary<string, SecureRest.TokenData>();
+		public static Dictionary<string, SecureRest.TokenData> RESTStartupTokens = new();
 
 		/// <summary>The TShock anti-cheat/anti-exploit system.</summary>
 		internal Bouncer Bouncer;
@@ -165,21 +170,21 @@ namespace TShockAPI
 		/// <value>value - "TShock"</value>
 		public override string Name
 		{
-			get { return "TShock"; }
+			get { return "Mongo-TShock"; }
 		}
 
 		/// <summary>Author - The author of the plugin.</summary>
 		/// <value>value - "The TShock Team"</value>
 		public override string Author
 		{
-			get { return "The TShock Team"; }
+			get { return "The TShock Team & Mongoosed by Average"; }
 		}
 
 		/// <summary>Description - The plugin description.</summary>
 		/// <value>value - "The administration modification of the future."</value>
 		public override string Description
 		{
-			get { return "The administration modification of the future."; }
+			get { return "The administration modification of the future, with some mods."; }
 		}
 
 		/// <summary>TShock - The constructor for the TShock plugin.</summary>
@@ -197,7 +202,7 @@ namespace TShockAPI
 		}
 
 
-		static Dictionary<string, IntPtr> _nativeCache = new Dictionary<string, IntPtr>();
+		static Dictionary<string, IntPtr> _nativeCache = new();
 		static IntPtr ResolveNativeDep(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
 		{
 			if (_nativeCache.TryGetValue(libraryName, out IntPtr cached))
@@ -303,6 +308,7 @@ namespace TShockAPI
 				}
 
 				AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+				Log = new TextLog(logFilename, LogClear);
 			}
 			catch (Exception ex)
 			{
@@ -313,6 +319,20 @@ namespace TShockAPI
 			// Further exceptions are written to TShock's log from now on.
 			try
 			{
+				if (!string.IsNullOrEmpty(Config.Settings.ConnectionString))
+				{
+					MongoDB.Entities.DB.InitAsync(Config.Settings.DatabaseName,
+					MongoDB.Driver.MongoClientSettings.FromConnectionString(
+							Config.Settings.ConnectionString)).Wait();
+
+					MongoConfigured = true;
+
+				}
+				else
+				{
+					throw new Exception("Invalid connection string!");
+				}
+
 
 				if (File.Exists(Path.Combine(SavePath, "tshock.pid")))
 				{
@@ -351,7 +371,7 @@ namespace TShockAPI
 					Geo = new GeoIPCountry(geoippath);
 
 				// check if a custom tile provider is to be used
-				switch(Config.Settings.WorldTileProvider?.ToLower())
+				switch (Config.Settings.WorldTileProvider?.ToLower())
 				{
 					case "heaptile":
 						Log.ConsoleInfo(GetString($"Using {nameof(HeapTile)} for tile implementation"), TraceLevel.Info);
@@ -531,7 +551,7 @@ namespace TShockAPI
 		/// <param name="args">args - The PlayerPostLoginEventArgs object.</param>
 		private void OnPlayerLogin(PlayerPostLoginEventArgs args)
 		{
-			List<String> KnownIps = new List<string>();
+			List<String> KnownIps = new();
 			if (!string.IsNullOrWhiteSpace(args.Player.Account.KnownIps))
 			{
 				KnownIps = JsonConvert.DeserializeObject<List<String>>(args.Player.Account.KnownIps);
@@ -570,7 +590,10 @@ namespace TShockAPI
 
 		/// <summary>OnAccountCreate - Internal hook fired on account creation.</summary>
 		/// <param name="args">args - The AccountCreateEventArgs object.</param>
-		private void OnAccountCreate(Hooks.AccountCreateEventArgs args) => CharacterDB.SeedInitialData(UserAccounts.GetUserAccount(args.Account));
+		private void OnAccountCreate(Hooks.AccountCreateEventArgs args)
+		{
+			CharacterDB.SeedInitialData(UserAccounts.GetUserAccount(args.Account));
+		}
 
 		/// <summary>OnPlayerPreLogin - Internal hook fired when on player pre login.</summary>
 		/// <param name="args">args - The PlayerPreLoginEventArgs object.</param>
@@ -783,60 +806,60 @@ namespace TShockAPI
 					})
 
 				.AddFlag("-logformat", (format) =>
-					{
-						if (!string.IsNullOrWhiteSpace(format)) { LogFormat = format; }
-					})
+				{
+					if (!string.IsNullOrWhiteSpace(format)) { LogFormat = format; }
+				})
 
 				.AddFlag("-config", (cfg) =>
+				{
+					if (!string.IsNullOrWhiteSpace(cfg))
 					{
-						if (!string.IsNullOrWhiteSpace(cfg))
-						{
-							ServerApi.LogWriter.PluginWriteLine(this, GetString("Loading dedicated config file: {0}", cfg), TraceLevel.Verbose);
-							Main.instance.LoadDedConfig(cfg);
-						}
-					})
+						ServerApi.LogWriter.PluginWriteLine(this, GetString("Loading dedicated config file: {0}", cfg), TraceLevel.Verbose);
+						Main.instance.LoadDedConfig(cfg);
+					}
+				})
 
 				.AddFlag("-port", (p) =>
+				{
+					int port;
+					if (int.TryParse(p, out port))
 					{
-						int port;
-						if (int.TryParse(p, out port))
-						{
-							Netplay.ListenPort = port;
-							ServerApi.LogWriter.PluginWriteLine(this, GetString("Listening on port {0}.", port), TraceLevel.Verbose);
-						}
-					})
+						Netplay.ListenPort = port;
+						ServerApi.LogWriter.PluginWriteLine(this, GetString("Listening on port {0}.", port), TraceLevel.Verbose);
+					}
+				})
 
 				.AddFlag("-worldname", (world) =>
+				{
+					if (!string.IsNullOrWhiteSpace(world))
 					{
-						if (!string.IsNullOrWhiteSpace(world))
-						{
-							Main.instance.SetWorldName(world);
-							ServerApi.LogWriter.PluginWriteLine(this, GetString("World name will be overridden by: {0}", world), TraceLevel.Verbose);
-						}
-					})
+						Main.instance.SetWorldName(world);
+						ServerApi.LogWriter.PluginWriteLine(this, GetString("World name will be overridden by: {0}", world), TraceLevel.Verbose);
+					}
+				})
 
 				.AddFlag("-ip", (ip) =>
+				{
+					IPAddress addr;
+					if (IPAddress.TryParse(ip, out addr))
 					{
-						IPAddress addr;
-						if (IPAddress.TryParse(ip, out addr))
-						{
-							Netplay.ServerIP = addr;
-							ServerApi.LogWriter.PluginWriteLine(this, GetString("Listening on IP {0}.", addr), TraceLevel.Verbose);
-						}
-						else
-						{
-							// The server should not start up if this argument is invalid.
-							throw new InvalidOperationException("Invalid value given for command line argument \"-ip\".");
-						}
-					})
+						Netplay.ServerIP = addr;
+						ServerApi.LogWriter.PluginWriteLine(this, GetString("Listening on IP {0}.", addr), TraceLevel.Verbose);
+					}
+					else
+					{
+						// The server should not start up if this argument is invalid.
+						throw new InvalidOperationException("Invalid value given for command line argument \"-ip\".");
+					}
+				})
 
 				.AddFlag("-autocreate", (size) =>
+				{
+					if (!string.IsNullOrWhiteSpace(size))
 					{
-						if (!string.IsNullOrWhiteSpace(size))
-						{
-							Main.instance.autoCreate(size);
-						}
-					})
+						Main.instance.autoCreate(size);
+					}
+				})
 
 				.AddFlag("-worldevil", (value) =>
 				{
@@ -873,38 +896,38 @@ namespace TShockAPI
 		/// <param name="parms">parms - The array of arguments passed in through the command line.</param>
 		public static void HandleCommandLinePostConfigLoad(string[] parms)
 		{
-			FlagSet portSet = new FlagSet("-port");
-			FlagSet playerSet = new FlagSet("-maxplayers", "-players");
-			FlagSet restTokenSet = new FlagSet("--rest-token", "-rest-token");
-			FlagSet restEnableSet = new FlagSet("--rest-enabled", "-rest-enabled");
-			FlagSet restPortSet = new FlagSet("--rest-port", "-rest-port");
+			FlagSet portSet = new("-port");
+			FlagSet playerSet = new("-maxplayers", "-players");
+			FlagSet restTokenSet = new("--rest-token", "-rest-token");
+			FlagSet restEnableSet = new("--rest-enabled", "-rest-enabled");
+			FlagSet restPortSet = new("--rest-port", "-rest-port");
 
 			CliParser
 				.AddFlags(portSet, (p) =>
+				{
+					int port;
+					if (int.TryParse(p, out port))
 					{
-						int port;
-						if (int.TryParse(p, out port))
-						{
-							Netplay.ListenPort = port;
-							Config.Settings.ServerPort = port;
-							OverridePort = true;
-							Log.ConsoleInfo(GetString("Port overridden by startup argument. Set to {0}", port));
-						}
-					})
+						Netplay.ListenPort = port;
+						Config.Settings.ServerPort = port;
+						OverridePort = true;
+						Log.ConsoleInfo(GetString("Port overridden by startup argument. Set to {0}", port));
+					}
+				})
 				.AddFlags(restTokenSet, (token) =>
-					{
-						RESTStartupTokens.Add(token, new SecureRest.TokenData { Username = "null", UserGroupName = "superadmin" });
-						Console.WriteLine(GetString("Startup parameter overrode REST token."));
-					})
+				{
+					RESTStartupTokens.Add(token, new SecureRest.TokenData { Username = "null", UserGroupName = "superadmin" });
+					Console.WriteLine(GetString("Startup parameter overrode REST token."));
+				})
 				.AddFlags(restEnableSet, (e) =>
+				{
+					bool enabled;
+					if (bool.TryParse(e, out enabled))
 					{
-						bool enabled;
-						if (bool.TryParse(e, out enabled))
-						{
-							Config.Settings.RestApiEnabled = enabled;
-							Console.WriteLine(GetString("Startup parameter overrode REST enable."));
-						}
-					})
+						Config.Settings.RestApiEnabled = enabled;
+						Console.WriteLine(GetString("Startup parameter overrode REST enable."));
+					}
+				})
 				.AddFlags(restPortSet, (p) =>
 				{
 					int restPort;
@@ -915,14 +938,14 @@ namespace TShockAPI
 					}
 				})
 				.AddFlags(playerSet, (p) =>
+				{
+					int slots;
+					if (int.TryParse(p, out slots))
 					{
-						int slots;
-						if (int.TryParse(p, out slots))
-						{
-							Config.Settings.MaxSlots = slots;
-							Console.WriteLine(GetString("Startup parameter overrode maximum player slot configuration value."));
-						}
-					});
+						Config.Settings.MaxSlots = slots;
+						Console.WriteLine(GetString("Startup parameter overrode maximum player slot configuration value."));
+					}
+				});
 
 			CliParser.ParseFromSource(parms);
 		}
@@ -1019,6 +1042,8 @@ namespace TShockAPI
 				Console.WriteLine(GetString("This token will display until disabled by verification. ({0}setup)", Commands.Specifier));
 				Console.ResetColor();
 			}
+
+			Regions.Reload();
 
 			Utils.ComputeMaxStyles();
 			Utils.FixChestStacks();
@@ -1131,13 +1156,13 @@ namespace TShockAPI
 					if (player.RecentFuse > 0)
 						player.RecentFuse--;
 
-					if ((Main.ServerSideCharacter) && (player.TPlayer.SpawnX > 0) && (player.sX != player.TPlayer.SpawnX))
+					if (Main.ServerSideCharacter && (player.TPlayer.SpawnX > 0) && (player.sX != player.TPlayer.SpawnX))
 					{
 						player.sX = player.TPlayer.SpawnX;
 						player.sY = player.TPlayer.SpawnY;
 					}
 
-					if ((Main.ServerSideCharacter) && (player.sX > 0) && (player.sY > 0) && (player.TPlayer.SpawnX < 0))
+					if (Main.ServerSideCharacter && (player.sX > 0) && (player.sY > 0) && (player.TPlayer.SpawnX < 0))
 					{
 						player.TPlayer.SpawnX = player.sX;
 						player.TPlayer.SpawnY = player.sY;
@@ -1262,7 +1287,7 @@ namespace TShockAPI
 				return false;
 			}
 
-			if (!Config.Settings.AllowHallowCreep && (TileID.Sets.Hallow[tileType]))
+			if (!Config.Settings.AllowHallowCreep && TileID.Sets.Hallow[tileType])
 			{
 				return false;
 			}
